@@ -416,6 +416,30 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
 .up[data-urg="mid"][aria-pressed="true"] b{color:#3a2600}
 @media (prefers-reduced-motion:reduce){.up{transition:none}.up:hover{transform:none}}
 
+/* comments */
+.cmt-sec{border-top:1px dashed var(--line);padding-top:16px}
+.cmts{display:flex;flex-direction:column;gap:12px}
+.cmt{display:flex;gap:10px;align-items:flex-start}
+.cmt .av{width:30px;height:30px;font-size:.7rem;margin-top:2px}
+.cmt-b{flex:1;min-width:0;background:var(--sunk);border-radius:4px 16px 16px 16px;padding:9px 13px}
+.cmt.mine .cmt-b{background:color-mix(in srgb,var(--lime) 18%,var(--surface))}
+.cmt-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:3px}
+.cmt-h b{font:700 .9rem var(--f-display)}
+.cmt-t{font:500 .72rem var(--f-mono);color:var(--muted)}
+.cmt-act{margin-left:auto;display:inline-flex;gap:2px;align-items:center;font-size:.76rem;color:var(--muted)}
+.cmt-act button{border:0;background:transparent;font-size:.76rem;font-weight:700;color:var(--muted);padding:2px 6px;border-radius:6px}
+.cmt-act button:hover{background:var(--surface);color:var(--fg)}
+.cmt-act button.danger{color:var(--danger)}
+.cmt-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:.92rem}
+.cmt-empty{margin:0;color:var(--muted);font-size:.88rem;padding:10px 12px;border:1.5px dashed var(--line);border-radius:12px}
+.cmt-new{display:flex;gap:10px;align-items:flex-start;margin-top:12px}
+.cmt-new .av{width:30px;height:30px;font-size:.7rem;margin-top:4px}
+.cmt-new-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.cmt-new-b textarea,.cmt-edit textarea{width:100%;resize:vertical;min-height:44px;line-height:1.45}
+.cmt-new-a{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.cmt-hint{font:500 .7rem var(--f-mono);color:var(--muted);margin-right:auto}
+.cmt-edit{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+
 </style>
 </head>
 <body>
@@ -544,6 +568,8 @@ function handleErr(e){
   if(/row-level security|permission/i.test(msg)){toast('You don’t have permission to do that.');return;}
   toast('Could not save. Check your connection and try again.');
   console.error(e);}
+let comments=[],commentsOk=true,editingComment=null,deletingComment=null,postingComment=false;
+const commentsFor=id=>comments.filter(c=>c.task_id===id).sort((a,b)=>ts(a.created_at)-ts(b.created_at));
 let draft=null,confirmDiscard=false;   // a new task lives here until "Create task" is clicked
 const getTask=id=>(draft&&draft.id===id)?draft:tasks.find(x=>x.id===id);
 function write(id,patch){
@@ -649,6 +675,7 @@ function card(t){
     h('div',{class:'meta'},
       subs.length?h('span',{class:'sub',title:'Subtasks done',text:`☑ ${done}/${subs.length}`}):null,
       (t.files||[]).length?h('span',{class:'sub',title:'Attachments',text:`📎 ${t.files.length}`}):null,
+      (()=>{const n=comments.filter(c=>c.task_id===t.id).length;return n?h('span',{class:'sub cmt-count',title:n===1?'1 comment':n+' comments',text:`💬 ${n}`}):null;})(),
       t.due?h('span',{class:'due'+(isLate(t)?' late':''),text:(isLate(t)?'Overdue · ':'Due ')+fmtDue(t.due)}):null,
       t.assignee?h('span',{class:'who'},avatar(t.assignee),h('span',{text:aname(t.assignee)})):h('span',{class:'who',style:'color:var(--muted)',text:'Unassigned'})));
   return c;}
@@ -824,6 +851,64 @@ function fileTile(t,it){
     h('div',{class:'fa'},(isImg||isVid)?h('button',{text:'View',onclick:()=>lightbox(it)}):isPdf?h('button',{text:'Open',onclick:()=>openFile(it)}):null,
       h('button',{text:'Download',onclick:()=>downloadFile(it)}),rm));}
 
+/* ---------- comments ---------- */
+function ago(v){const d=(Date.now()-ts(v))/1000;
+  if(d<45)return 'just now';if(d<3600)return Math.round(d/60)+' min ago';if(d<86400)return Math.round(d/3600)+' h ago';
+  if(d<7*86400)return Math.round(d/86400)+' d ago';
+  return new Date(v).toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+async function postComment(taskId){
+  const el=$('#f-cmt');if(!el||postingComment)return;const body=el.value.trim();if(!body)return;
+  if(!commentsOk){toast('Comments need a one-time database update first.');return;}
+  if(body.length>5000){toast('That comment is too long. Keep it under 5,000 characters.');return;}
+  postingComment=true;const btn=$('#f-cmtpost');if(btn){btn.disabled=true;btn.textContent='Posting…';}
+  const row={id:uid(),task_id:taskId,author:me.id,body};
+  const {error}=await sb.from('task_comments').insert(row);
+  postingComment=false;if(btn){btn.disabled=false;btn.textContent='Post comment';}
+  if(error){handleErr(error);return;}
+  if(!comments.some(c=>c.id===row.id))comments.push(Object.assign({created_at:new Date().toISOString(),edited_at:null},row));
+  el.value='';el.style.height='';render();if(openId===taskId)syncPanel();
+  const list=$('#f-cmts');if(list&&list.lastElementChild)list.lastElementChild.scrollIntoView({block:'nearest'});}
+async function saveCommentEdit(c){
+  const el=$('#cmt-edit-'+c.id);const body=el?el.value.trim():'';if(!body)return;
+  const edited=new Date().toISOString();
+  const {error}=await sb.from('task_comments').update({body,edited_at:edited}).eq('id',c.id);
+  if(error){handleErr(error);return;}
+  Object.assign(c,{body,edited_at:edited});editingComment=null;syncPanel();}
+async function deleteComment(c){
+  deletingComment=null;const {error}=await sb.from('task_comments').delete().eq('id',c.id);
+  if(error){handleErr(error);return;}
+  comments=comments.filter(x=>x.id!==c.id);render();syncPanel();}
+function syncComments(t){
+  const sec=$('#f-cmtsec');if(!sec)return;
+  const isDraft=draft&&draft.id===t.id;
+  $('#f-cmtnew').hidden=isDraft||!commentsOk;
+  const list=commentsFor(t.id);
+  $('#f-cmthead').textContent=list.length?`Comments · ${list.length}`:'Comments';
+  const box=$('#f-cmts');
+  const ae=document.activeElement;if(editingComment&&ae&&ae.id==='cmt-edit-'+editingComment)return;   // don't wipe an edit in progress
+  if(isDraft){box.replaceChildren(h('p',{class:'cmt-empty',text:'Comments open once the task is on the board. Click Flourish first.'}));return;}
+  if(!commentsOk){box.replaceChildren(h('p',{class:'cmt-empty',text:'Comments aren’t switched on yet. An admin needs to run the comments database update (migration-03).'}));return;}
+  if(!list.length){box.replaceChildren(h('p',{class:'cmt-empty',text:'No comments yet. Hit a snag or have an update? Leave the first one.'}));return;}
+  box.replaceChildren(...list.map(c=>{
+    const mine=c.author===me.id,canDel=mine||isAdmin;
+    let bodyEl;
+    if(editingComment===c.id){
+      const ta=h('textarea',{class:'inp',id:'cmt-edit-'+c.id,rows:'3',onkeydown:e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();saveCommentEdit(c);}if(e.key==='Escape'){e.stopPropagation();editingComment=null;syncPanel();}}});
+      ta.value=c.body;
+      bodyEl=h('div',{class:'cmt-edit'},ta,h('div',{class:'cmt-new-a'},h('button',{class:'btn ghost',text:'Cancel',onclick:()=>{editingComment=null;syncPanel();}}),h('button',{class:'btn primary',text:'Save',onclick:()=>saveCommentEdit(c)})));
+      setTimeout(()=>{const x=$('#cmt-edit-'+c.id);if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}});
+    }else bodyEl=h('div',{class:'cmt-body',text:c.body});
+    const actions=deletingComment===c.id
+      ?h('span',{class:'cmt-act'},h('span',{text:'Delete?'}),h('button',{class:'danger',text:'Yes',onclick:()=>deleteComment(c)}),h('button',{text:'No',onclick:()=>{deletingComment=null;syncPanel();}}))
+      :(editingComment===c.id?null:h('span',{class:'cmt-act'},
+          mine?h('button',{text:'Edit',onclick:()=>{editingComment=c.id;deletingComment=null;syncPanel();}}):null,
+          canDel?h('button',{text:'Delete',onclick:()=>{deletingComment=c.id;syncPanel();}}):null));
+    return h('div',{class:'cmt'+(mine?' mine':'')},avatar(c.author),
+      h('div',{class:'cmt-b'},
+        h('div',{class:'cmt-h'},h('b',{text:c.author?aname(c.author):'Former member'}),
+          h('span',{class:'cmt-t',title:new Date(c.created_at).toLocaleString(),text:ago(c.created_at)+(c.edited_at?' · edited':'')}),actions),
+        bodyEl));}));}
+
 /* ---------- task panel ---------- */
 function closePanel(){openId=null;confirmDelete=false;closePicker();$('#layer').replaceChildren();}
 function openPanel(id,focusTitle){if(draft&&draft.id!==id){requestClose();if(draft)return;}teamOpen=false;removing=null;openId=id;confirmDelete=false;buildPanel();if(focusTitle)setTimeout(()=>{const t=$('#f-title');t&&t.focus();});}
@@ -871,6 +956,16 @@ function buildPanel(){
         h('div',{class:'addsub',style:'margin-top:8px'},subIn,h('button',{class:'btn',text:'Add',onclick:addSub}))),
       h('div',null,h('div',{class:'flabel',id:'f-filehead',text:'Attachments'}),h('div',{style:'height:6px'}),
         h('div',{class:'files',id:'f-files'}),h('div',{class:'flabel',id:'f-filenote',hidden:true,style:'margin-top:8px;text-transform:none;letter-spacing:0'}),drop,linkForm),
+      h('div',{class:'cmt-sec',id:'f-cmtsec'},
+        h('div',{class:'flabel',id:'f-cmthead',text:'Comments'}),h('div',{style:'height:8px'}),
+        h('div',{class:'cmts',id:'f-cmts'}),
+        h('div',{class:'cmt-new',id:'f-cmtnew'},avatar(me.id),
+          h('div',{class:'cmt-new-b'},
+            h('textarea',{class:'inp',id:'f-cmt',rows:'2',placeholder:'Write a comment. Ran into an issue? Describe it here so the team sees it.',
+              oninput:e=>{e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,220)+'px';},
+              onkeydown:e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();postComment(t.id);}}}),
+            h('div',{class:'cmt-new-a'},h('span',{class:'cmt-hint',text:'Ctrl/\u2318 + Enter to post'}),
+              h('button',{class:'btn primary',id:'f-cmtpost',text:'Post comment',onclick:()=>postComment(t.id)}))))),
       h('div',{class:'footmeta',id:'f-foot'})));
   panel.addEventListener('paste',e=>{const fs=[...((e.clipboardData&&e.clipboardData.files)||[])];if(fs.length){e.preventDefault();uploadFiles(t.id,fs);}});
   layer.replaceChildren(h('div',{class:'scrim',onclick:requestClose}),panel);
@@ -940,6 +1035,7 @@ function syncPanel(first){
   $('#f-filehead').textContent=files.length?`Attachments · ${files.length}`:'Attachments';
   const note=$('#f-filenote');const up=uploading[t.id]||0;note.hidden=!up;note.textContent=up?`Uploading ${up} ${up===1?'file':'files'}…`:'';
   $('#f-files').replaceChildren(...files.map(it=>fileTile(t,it)));
+  syncComments(t);
   // footer
   if(draft&&draft.id===t.id){
     const create=h('button',{class:'btn primary flourish',id:'f-create',text:'Flourish',title:'Create this task and add it to the board','aria-label':'Flourish: create this task',onclick:saveDraft});
@@ -1049,6 +1145,8 @@ async function loadAll(){
   const [t,b]=await Promise.all([sb.from('tasks').select('*'),sb.from('blockers').select('*').order('sort')]);
   if(t.error||b.error){handleErr(t.error||b.error);return;}
   tasks=t.data;blockerList=b.data;loaded=true;
+  const c=await sb.from('task_comments').select('*').order('created_at');
+  if(c.error){commentsOk=false;comments=[];console.warn('Comments unavailable:',c.error.message);}else{commentsOk=true;comments=c.data;}
   await loadMembers();}
 function applyChange(list,p){
   if(p.eventType==='DELETE'){const id=p.old&&p.old.id;return list.filter(x=>x.id!==id);}
@@ -1062,6 +1160,7 @@ function subscribe(){
       // ignore the echo of our own edit while more local edits are still queued
       tasks=applyChange(tasks,p);render();if(openId)syncPanel();if(teamOpen)renderTeamList();})
     .on('postgres_changes',{event:'*',schema:'public',table:'team_members'},()=>loadMembers())
+    .on('postgres_changes',{event:'*',schema:'public',table:'task_comments'},p=>{comments=applyChange(comments,p);render();if(openId)syncPanel();})
     .on('postgres_changes',{event:'*',schema:'public',table:'blockers'},p=>{blockerList=applyChange(blockerList,p).sort((a,b)=>a.sort-b.sort);render();if(openId)syncPanel();})
     .subscribe();}
 let hiddenAt=0;
