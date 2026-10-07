@@ -440,6 +440,48 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
 .cmt-hint{font:500 .7rem var(--f-mono);color:var(--muted);margin-right:auto}
 .cmt-edit{display:flex;flex-direction:column;gap:6px;margin-top:4px}
 
+/* @mentions */
+.mention{display:inline-block;padding:0 6px;border-radius:6px;font-weight:700;color:var(--i-ready);background:var(--t-ready)}
+.mention.me{color:var(--lime-ink);background:var(--lime)}
+.cmt-new-b,.cmt-edit{position:relative}
+.mention-pop{position:absolute;left:0;bottom:calc(100% + 6px);z-index:5;width:min(280px,100%);background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;box-shadow:var(--shadow-lift);padding:6px;display:flex;flex-direction:column;gap:2px}
+.mi-opt{display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:6px 8px;border-radius:10px;text-align:left;width:100%}
+.mi-opt.on,.mi-opt:hover{background:var(--accent-soft)}
+.mi-opt span{display:flex;flex-direction:column;min-width:0}
+.mi-opt b{font-weight:700}
+.mi-opt small{color:var(--muted);font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmt.flash .cmt-b{animation:flash 2s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--lime)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* notification bell */
+.bell-wrap{position:relative}
+.bell{border-radius:999px;width:40px;height:38px;padding:0;display:grid;place-items:center;position:relative}
+.bell-n{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--s-blocked);color:#fff;
+  font:800 .68rem/19px var(--f-body);text-align:center;box-shadow:0 0 0 2px var(--bg)}
+.bell:has(.bell-n:not([hidden])) svg{animation:ring 1.4s ease 1}
+@keyframes ring{0%,100%{transform:rotate(0)}15%{transform:rotate(14deg)}30%{transform:rotate(-12deg)}45%{transform:rotate(8deg)}60%{transform:rotate(-4deg)}}
+.notif-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:15;width:min(360px,calc(100vw - 32px));max-height:min(520px,70vh);overflow:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lift);padding:8px}
+.np-h{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 8px}
+.np-h b{font:800 1rem var(--f-display)}
+.np-link{border:0;background:transparent;color:var(--accent);font-weight:700;font-size:.8rem;padding:4px 6px;border-radius:8px}
+.np-link:hover{background:var(--accent-soft)}
+.np-alerts{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:1.5px dashed color-mix(in srgb,var(--lime) 70%,var(--line));
+  background:color-mix(in srgb,var(--lime) 14%,var(--surface));border-radius:12px;padding:8px 10px;margin:0 0 6px;font-weight:700;font-size:.85rem}
+.np-alerts small{font-weight:500;color:var(--muted);font-size:.76rem}
+.np-list{display:flex;flex-direction:column;gap:2px}
+.np-item{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:transparent;padding:9px 8px;border-radius:12px;position:relative}
+.np-item:hover{background:var(--sunk)}
+.np-item.unread{background:color-mix(in srgb,var(--s-ready) 9%,var(--surface))}
+.np-item.unread::after{content:"";position:absolute;right:10px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--s-ready)}
+.np-item .av{width:30px;height:30px;font-size:.7rem}
+.np-txt{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:.86rem;padding-right:14px}
+.np-snip{color:var(--muted);font-size:.8rem;overflow-wrap:anywhere}
+.np-time{font:500 .7rem var(--f-mono);color:var(--muted)}
+.np-empty{margin:4px 8px 10px;color:var(--muted);font-size:.86rem}
+@media (prefers-reduced-motion:reduce){.bell svg{animation:none!important}.cmt.flash .cmt-b{animation:none}}
+
 </style>
 </head>
 <body>
@@ -459,6 +501,7 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
       <input class="inp" id="q" type="search" placeholder="Search tasks" aria-label="Search tasks">
       <select class="inp" id="type" aria-label="Filter by type"></select>
       <select class="inp" id="who" aria-label="Filter by person"></select>
+      <div class="bell-wrap" id="bell-wrap"><button class="btn bell" id="bell" aria-label="Notifications" aria-expanded="false" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6l-1.6 2.7A1 1 0 0 0 5.3 17h13.4a1 1 0 0 0 .9-1.7L18 12.6V9a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 19.5a2.6 2.6 0 0 0 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="bell-n" id="bell-n" hidden></span></button></div>
       <button class="btn" id="team">Team</button>
       <button class="btn primary" id="new">New task</button>
     </div>
@@ -568,6 +611,7 @@ function handleErr(e){
   if(/row-level security|permission/i.test(msg)){toast('You don’t have permission to do that.');return;}
   toast('Could not save. Check your connection and try again.');
   console.error(e);}
+let notifs=[],notifsOk=true,notifOpen=false;
 let comments=[],commentsOk=true,editingComment=null,deletingComment=null,postingComment=false;
 const commentsFor=id=>comments.filter(c=>c.task_id===id).sort((a,b)=>ts(a.created_at)-ts(b.created_at));
 let draft=null,confirmDiscard=false;   // a new task lives here until "Create task" is clicked
@@ -851,6 +895,94 @@ function fileTile(t,it){
     h('div',{class:'fa'},(isImg||isVid)?h('button',{text:'View',onclick:()=>lightbox(it)}):isPdf?h('button',{text:'Open',onclick:()=>openFile(it)}):null,
       h('button',{text:'Download',onclick:()=>downloadFile(it)}),rm));}
 
+/* ---------- @mentions ---------- */
+const handleOf=m=>(m.nickname||m.name.split(/\s+/)[0]||'').replace(/\s+/g,'');
+function mentionedIds(text){
+  const ids=new Set();const re=/(^|[^\w@])@([\w.\-]+)/g;let x;
+  while((x=re.exec(text))){const tok=x[2].replace(/[.\-]+$/,'').toLowerCase();
+    const m=members.find(mm=>handleOf(mm).toLowerCase()===tok)||members.find(mm=>mm.name.replace(/\s+/g,'').toLowerCase()===tok);
+    if(m)ids.add(m.id);}
+  return [...ids];}
+// comment text with @mentions drawn as chips (built as DOM nodes, never HTML)
+function richBody(text){
+  const out=[];const re=/(^|[^\w@])@([\w.\-]+)/g;let last=0,x;
+  while((x=re.exec(text))){
+    const tok=x[2].replace(/[.\-]+$/,'');const m=members.find(mm=>handleOf(mm).toLowerCase()===tok.toLowerCase());
+    if(!m)continue;
+    const start=x.index+x[1].length;
+    out.push(document.createTextNode(text.slice(last,start)));
+    out.push(h('span',{class:'mention'+(m.id===me.id?' me':''),title:m.name,text:'@'+tok}));
+    last=start+1+tok.length;}
+  out.push(document.createTextNode(text.slice(last)));return out;}
+// "@" typeahead for a textarea; the list opens inside `host`
+function attachMentions(ta,host){
+  let box=null,items=[],sel=0,start=-1;
+  const close=()=>{if(box){box.remove();box=null;}start=-1;};
+  const pick=m=>{const v=ta.value,caret=ta.selectionStart,ins='@'+handleOf(m)+' ';
+    ta.value=v.slice(0,start)+ins+v.slice(caret);const pos=start+ins.length;ta.setSelectionRange(pos,pos);close();ta.focus();ta.dispatchEvent(new Event('input'));};
+  const paint=()=>{box.replaceChildren(...items.map((m,i)=>h('button',{type:'button',class:'mi-opt'+(i===sel?' on':''),
+      onmousedown:e=>{e.preventDefault();pick(m);}},avatar(m.id),h('span',null,h('b',{text:handleOf(m)}),h('small',{text:m.name})))));};
+  ta.addEventListener('input',()=>{
+    const before=ta.value.slice(0,ta.selectionStart);const x=/(^|\s)@([\w.\-]*)$/.exec(before);
+    if(!x){close();return;}
+    start=before.length-x[2].length-1;const q=x[2].toLowerCase();
+    items=members.filter(m=>m.id!==me.id&&(handleOf(m).toLowerCase().startsWith(q)||m.name.toLowerCase().split(/\s+/).some(w=>w.startsWith(q)))).slice(0,6);
+    if(!items.length){close();return;}
+    sel=0;if(!box){box=h('div',{class:'mention-pop',role:'listbox'});host.append(box);}paint();});
+  ta.addEventListener('keydown',e=>{if(!box)return;
+    if(e.key==='ArrowDown'){e.preventDefault();sel=(sel+1)%items.length;paint();}
+    else if(e.key==='ArrowUp'){e.preventDefault();sel=(sel-1+items.length)%items.length;paint();}
+    else if((e.key==='Enter'&&!e.metaKey&&!e.ctrlKey)||e.key==='Tab'){e.preventDefault();e.stopImmediatePropagation();pick(items[sel]);}
+    else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}},true);
+  ta.addEventListener('blur',()=>setTimeout(close,120));}
+
+/* ---------- notifications ---------- */
+const unread=()=>notifs.filter(n=>!n.read_at).length;
+function renderBell(){
+  const b=$('#bell');if(!b)return;b.hidden=!notifsOk;
+  const n=unread(),badge=$('#bell-n');badge.hidden=!n;badge.textContent=n>9?'9+':String(n);
+  b.setAttribute('aria-label',n?`Notifications, ${n} unread`:'Notifications');
+  if(notifOpen)renderNotifList();}
+function renderNotifList(){
+  const pop=$('#notif-pop');if(!pop)return;
+  const head=h('div',{class:'np-h'},h('b',{text:'Notifications'}),
+    unread()?h('button',{class:'np-link',text:'Mark all read',onclick:markAllRead}):null);
+  const perm=('Notification' in window)?Notification.permission:'unsupported';
+  const alerts=perm==='default'?h('button',{class:'np-alerts',onclick:async()=>{try{await Notification.requestPermission();}catch(e){}renderNotifList();}},
+      '🔔 Turn on desktop alerts',h('small',{text:'Get a pop-up when someone tags you while the board is open.'})):null;
+  const list=notifs.slice(0,40);
+  pop.replaceChildren(...[head,alerts,list.length?h('div',{class:'np-list'},...list.map(n=>{
+      const t=tasks.find(x=>x.id===n.task_id);const c=comments.find(x=>x.id===n.comment_id);
+      return h('button',{class:'np-item'+(n.read_at?'':' unread'),onclick:()=>openNotif(n)},avatar(n.actor),
+        h('span',{class:'np-txt'},h('span',null,h('b',{text:n.actor?aname(n.actor):'Someone'}),' mentioned you on ',h('b',{text:t?(t.title||'Untitled task'):'a task'})),
+          c?h('span',{class:'np-snip',text:c.body.length>110?c.body.slice(0,110)+'…':c.body}):null,
+          h('span',{class:'np-time',text:ago(n.created_at)})));}))
+    :h('p',{class:'np-empty',text:'No notifications yet. When someone tags you with @'+handleOf(me)+' in a comment, it shows up here.'})].filter(Boolean));}
+function toggleNotifs(force){
+  notifOpen=force!==undefined?force:!notifOpen;
+  const wrap=$('#bell-wrap');let pop=$('#notif-pop');
+  if(notifOpen){if(!pop){pop=h('div',{class:'notif-pop',id:'notif-pop',role:'dialog','aria-label':'Notifications'});wrap.append(pop);}renderNotifList();}
+  else if(pop)pop.remove();
+  $('#bell').setAttribute('aria-expanded',notifOpen?'true':'false');}
+async function markRead(ids){
+  if(!ids.length)return;const now=new Date().toISOString();
+  notifs.forEach(n=>{if(ids.includes(n.id))n.read_at=now;});renderBell();
+  const {error}=await sb.from('notifications').update({read_at:now}).in('id',ids);if(error)console.warn(error);}
+function markAllRead(){markRead(notifs.filter(n=>!n.read_at).map(n=>n.id));}
+function openNotif(n){
+  toggleNotifs(false);markRead([n.id]);
+  if(!tasks.some(t=>t.id===n.task_id)){toast('That task has been deleted.');return;}
+  openPanel(n.task_id);
+  setTimeout(()=>{const el=document.querySelector(`.cmt[data-cid="${n.comment_id}"]`);
+    if(el){el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2200);}},120);}
+function announce(n){
+  const t=tasks.find(x=>x.id===n.task_id);const who=n.actor?aname(n.actor):'Someone';const title=t?(t.title||'Untitled task'):'a task';
+  toast(`🔔 ${who} mentioned you on “${title}”`);
+  try{if(document.hidden&&'Notification' in window&&Notification.permission==='granted'){
+    const c=comments.find(x=>x.id===n.comment_id);
+    const note=new Notification(`${who} mentioned you`,{body:`${title}${c?' — '+c.body.slice(0,120):''}`,tag:n.id});
+    note.onclick=()=>{window.focus();openNotif(n);note.close();};}}catch(e){}}
+
 /* ---------- comments ---------- */
 function ago(v){const d=(Date.now()-ts(v))/1000;
   if(d<45)return 'just now';if(d<3600)return Math.round(d/60)+' min ago';if(d<86400)return Math.round(d/3600)+' h ago';
@@ -861,7 +993,7 @@ async function postComment(taskId){
   if(!commentsOk){toast('Comments need a one-time database update first.');return;}
   if(body.length>5000){toast('That comment is too long. Keep it under 5,000 characters.');return;}
   postingComment=true;const btn=$('#f-cmtpost');if(btn){btn.disabled=true;btn.textContent='Posting…';}
-  const row={id:uid(),task_id:taskId,author:me.id,body};
+  const row={id:uid(),task_id:taskId,author:me.id,body};const ments=mentionedIds(body);if(ments.length&&notifsOk)row.mentions=ments;
   const {error}=await sb.from('task_comments').insert(row);
   postingComment=false;if(btn){btn.disabled=false;btn.textContent='Post comment';}
   if(error){handleErr(error);return;}
@@ -871,9 +1003,10 @@ async function postComment(taskId){
 async function saveCommentEdit(c){
   const el=$('#cmt-edit-'+c.id);const body=el?el.value.trim():'';if(!body)return;
   const edited=new Date().toISOString();
-  const {error}=await sb.from('task_comments').update({body,edited_at:edited}).eq('id',c.id);
+  const patch={body,edited_at:edited};if(notifsOk)patch.mentions=mentionedIds(body);
+  const {error}=await sb.from('task_comments').update(patch).eq('id',c.id);
   if(error){handleErr(error);return;}
-  Object.assign(c,{body,edited_at:edited});editingComment=null;syncPanel();}
+  Object.assign(c,patch);editingComment=null;syncPanel();}
 async function deleteComment(c){
   deletingComment=null;const {error}=await sb.from('task_comments').delete().eq('id',c.id);
   if(error){handleErr(error);return;}
@@ -897,13 +1030,14 @@ function syncComments(t){
       ta.value=c.body;
       bodyEl=h('div',{class:'cmt-edit'},ta,h('div',{class:'cmt-new-a'},h('button',{class:'btn ghost',text:'Cancel',onclick:()=>{editingComment=null;syncPanel();}}),h('button',{class:'btn primary',text:'Save',onclick:()=>saveCommentEdit(c)})));
       setTimeout(()=>{const x=$('#cmt-edit-'+c.id);if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length);}});
-    }else bodyEl=h('div',{class:'cmt-body',text:c.body});
+      attachMentions(ta,bodyEl);
+    }else bodyEl=h('div',{class:'cmt-body'},...richBody(c.body));
     const actions=deletingComment===c.id
       ?h('span',{class:'cmt-act'},h('span',{text:'Delete?'}),h('button',{class:'danger',text:'Yes',onclick:()=>deleteComment(c)}),h('button',{text:'No',onclick:()=>{deletingComment=null;syncPanel();}}))
       :(editingComment===c.id?null:h('span',{class:'cmt-act'},
           mine?h('button',{text:'Edit',onclick:()=>{editingComment=c.id;deletingComment=null;syncPanel();}}):null,
           canDel?h('button',{text:'Delete',onclick:()=>{deletingComment=c.id;syncPanel();}}):null));
-    return h('div',{class:'cmt'+(mine?' mine':'')},avatar(c.author),
+    return h('div',{class:'cmt'+(mine?' mine':''),'data-cid':c.id},avatar(c.author),
       h('div',{class:'cmt-b'},
         h('div',{class:'cmt-h'},h('b',{text:c.author?aname(c.author):'Former member'}),
           h('span',{class:'cmt-t',title:new Date(c.created_at).toLocaleString(),text:ago(c.created_at)+(c.edited_at?' · edited':'')}),actions),
@@ -961,7 +1095,7 @@ function buildPanel(){
         h('div',{class:'cmts',id:'f-cmts'}),
         h('div',{class:'cmt-new',id:'f-cmtnew'},avatar(me.id),
           h('div',{class:'cmt-new-b'},
-            h('textarea',{class:'inp',id:'f-cmt',rows:'2',placeholder:'Write a comment. Ran into an issue? Describe it here so the team sees it.',
+            h('textarea',{class:'inp',id:'f-cmt',rows:'2',placeholder:'Write a comment. Type @ to tag a teammate and notify them.',
               oninput:e=>{e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,220)+'px';},
               onkeydown:e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();postComment(t.id);}}}),
             h('div',{class:'cmt-new-a'},h('span',{class:'cmt-hint',text:'Ctrl/\u2318 + Enter to post'}),
@@ -969,6 +1103,7 @@ function buildPanel(){
       h('div',{class:'footmeta',id:'f-foot'})));
   panel.addEventListener('paste',e=>{const fs=[...((e.clipboardData&&e.clipboardData.files)||[])];if(fs.length){e.preventDefault();uploadFiles(t.id,fs);}});
   layer.replaceChildren(h('div',{class:'scrim',onclick:requestClose}),panel);
+  const cta=$('#f-cmt');if(cta)attachMentions(cta,cta.parentElement);
   syncPanel(true);}
 function syncPanel(first){
   const t=getTask(openId);if(!t){if(openId)closePanel();return;}
@@ -1147,6 +1282,9 @@ async function loadAll(){
   tasks=t.data;blockerList=b.data;loaded=true;
   const c=await sb.from('task_comments').select('*').order('created_at');
   if(c.error){commentsOk=false;comments=[];console.warn('Comments unavailable:',c.error.message);}else{commentsOk=true;comments=c.data;}
+  const nq=await sb.from('notifications').select('*').eq('recipient',me.id).order('created_at',{ascending:false}).limit(60);
+  if(nq.error){notifsOk=false;notifs=[];console.warn('Notifications unavailable:',nq.error.message);}else{notifsOk=true;notifs=nq.data;}
+  renderBell();
   await loadMembers();}
 function applyChange(list,p){
   if(p.eventType==='DELETE'){const id=p.old&&p.old.id;return list.filter(x=>x.id!==id);}
@@ -1160,6 +1298,10 @@ function subscribe(){
       // ignore the echo of our own edit while more local edits are still queued
       tasks=applyChange(tasks,p);render();if(openId)syncPanel();if(teamOpen)renderTeamList();})
     .on('postgres_changes',{event:'*',schema:'public',table:'team_members'},()=>loadMembers())
+    .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter:'recipient=eq.'+me.id},p=>{
+      const isNew=p.eventType==='INSERT'&&!notifs.some(n=>n.id===p.new.id);
+      notifs=applyChange(notifs,p).sort((a,b)=>ts(b.created_at)-ts(a.created_at));renderBell();
+      if(isNew)setTimeout(()=>announce(p.new),400);})   // small delay so the comment itself has arrived
     .on('postgres_changes',{event:'*',schema:'public',table:'task_comments'},p=>{comments=applyChange(comments,p);render();if(openId)syncPanel();})
     .on('postgres_changes',{event:'*',schema:'public',table:'blockers'},p=>{blockerList=applyChange(blockerList,p).sort((a,b)=>a.sort-b.sort);render();if(openId)syncPanel();})
     .subscribe();}
@@ -1200,7 +1342,7 @@ function showGate(mode,detail){
     finally{btn.disabled=false;}}},email,btn,msg);
   box.replaceChildren(h('h1',{text:'Entegro Health\u2019s Team Board'}),h('p',{text:'Sign in with your work email. We’ll send you a link; no password needed.'}),form);
   setTimeout(()=>email.focus());}
-async function signOut(){try{await sb.auth.signOut();}catch(e){}me=null;session=null;tasks=[];members=[];loaded=false;closePanel();showGate('signin');}
+async function signOut(){try{await sb.auth.signOut();}catch(e){}me=null;session=null;tasks=[];members=[];notifs=[];comments=[];loaded=false;toggleNotifs(false);closePanel();showGate('signin');}
 let entering=false;
 async function enter(){
   if(entering||me)return;entering=true;
@@ -1225,8 +1367,10 @@ $('#wk-next').addEventListener('click',()=>{filter.week=shiftWk(baseWk(),1);rend
 $('#wk-today').addEventListener('click',()=>{filter.week=wkId(new Date());render();});
 $('#new').addEventListener('click',()=>createTask('queue'));
 $('#team').addEventListener('click',openTeam);
+$('#bell').addEventListener('click',e=>{e.stopPropagation();toggleNotifs();});
+document.addEventListener('mousedown',e=>{if(notifOpen&&!$('#bell-wrap').contains(e.target))toggleNotifs(false);});
 $('#signout').addEventListener('click',signOut);
-document.addEventListener('keydown',e=>{if(e.key!=='Escape'||pop||document.querySelector('.lightbox'))return;if(openId)requestClose();else if(teamOpen)closeTeam();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape'||pop||document.querySelector('.lightbox'))return;if(notifOpen){toggleNotifs(false);return;}if(openId)requestClose();else if(teamOpen)closeTeam();});
 
 async function start(){
   if(/^PASTE/.test(SUPABASE_URL)||/^PASTE/.test(SUPABASE_ANON_KEY)||!window.supabase){showGate('setup');return;}
