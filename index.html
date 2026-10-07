@@ -237,6 +237,7 @@ html,body{margin:0}
 .createbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;width:100%;padding:12px;border-radius:10px;background:var(--accent-soft)}
 .createbar span{font-size:.88rem;color:var(--fg)}
 #f-foot{position:sticky;bottom:0;background:var(--surface)}
+.btn.flourish{padding:9px 22px;font-family:var(--f-display);letter-spacing:.02em}
 
 </style>
 </head>
@@ -392,7 +393,7 @@ async function saveDraft(){
   const now=new Date().toISOString();
   const row=Object.assign({},d,{created_at:now,updated_at:now,created_by:me.id,updated_by:me.id});
   const {error}=await sb.from('tasks').insert(row);
-  if(error){if(btn){btn.disabled=false;btn.textContent='Create task';}handleErr(error);return;}
+  if(error){if(btn){btn.disabled=false;btn.textContent='Flourish';}handleErr(error);return;}
   draft=null;confirmDiscard=false;
   if(!tasks.some(x=>x.id===row.id))tasks.push(row);
   closePanel();render();
@@ -752,12 +753,12 @@ function syncPanel(first){
   $('#f-files').replaceChildren(...files.map(it=>fileTile(t,it)));
   // footer
   if(draft&&draft.id===t.id){
-    const create=h('button',{class:'btn primary',id:'f-create',text:'Create task',onclick:saveDraft});
+    const create=h('button',{class:'btn primary flourish',id:'f-create',text:'Flourish',title:'Create this task and add it to the board','aria-label':'Flourish: create this task',onclick:saveDraft});
     $('#f-foot').replaceChildren(confirmDiscard
       ?h('div',{class:'confirm',id:'f-discard',style:'width:100%'},'Discard this new task? Nothing has been saved.',
           h('button',{class:'btn danger',text:'Discard',onclick:()=>{discardDraft();closePanel();}}),
           h('button',{class:'btn ghost',text:'Keep editing',onclick:()=>{confirmDiscard=false;syncPanel();}}))
-      :h('div',{class:'createbar'},h('span',{text:'This task isn\u2019t on the board until you create it.'}),
+      :h('div',{class:'createbar'},h('span',{text:'Nothing is saved yet. Click Flourish to add this task to the board.'}),
           h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn ghost',text:'Cancel',onclick:requestClose}),create)));
     return;}
   const when=v=>v?new Date(v).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
