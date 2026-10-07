@@ -234,6 +234,9 @@ html,body{margin:0}
 .panel-b > *{flex-shrink:0}
 .mrow .mi b .you{display:inline}
 @media (max-width:640px){#q{flex:1 1 100%}}
+.createbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;width:100%;padding:12px;border-radius:10px;background:var(--accent-soft)}
+.createbar span{font-size:.88rem;color:var(--fg)}
+#f-foot{position:sticky;bottom:0;background:var(--surface)}
 
 </style>
 </head>
@@ -357,7 +360,10 @@ function handleErr(e){
   if(/row-level security|permission/i.test(msg)){toast('You don’t have permission to do that.');return;}
   toast('Could not save. Check your connection and try again.');
   console.error(e);}
+let draft=null,confirmDiscard=false;   // a new task lives here until "Create task" is clicked
+const getTask=id=>(draft&&draft.id===id)?draft:tasks.find(x=>x.id===id);
 function write(id,patch){
+  if(draft&&draft.id===id){Object.assign(draft,patch);return Promise.resolve();}   // drafts stay local
   patch.updated_by=me.id;
   const t=tasks.find(x=>x.id===id);if(t)Object.assign(t,patch);
   chains[id]=(chains[id]||Promise.resolve()).then(async()=>{
@@ -370,11 +376,38 @@ async function createTask(status){
   const type=filter.type!=='all'&&filter.type!=='none'?filter.type:null;
   const row={id,title:'',body:'',status:status||'queue',blocker:null,type,week,due:null,assignee:null,subtasks:[],files:[],
     created_by:me.id,updated_by:me.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-  tasks.push(Object.assign({},row));
-  chains[id]=(async()=>{const {error}=await sb.from('tasks').insert(row);if(error){tasks=tasks.filter(x=>x.id!==id);render();if(openId===id)closePanel();handleErr(error);}})();
-  openPanel(id,true);render();}
+  if(draft)discardDraft();
+  draft=row;openPanel(id,true);}
+function draftHasContent(){const d=draft;if(!d)return false;
+  const title=($('#f-title')&&$('#f-title').value.trim())||d.title,body=($('#f-body')&&$('#f-body').value.trim())||d.body;
+  return !!(title||body||d.assignee||d.due||(d.subtasks||[]).length||(d.files||[]).length);}
+async function saveDraft(){
+  const d=draft;if(!d)return;
+  const titleEl=$('#f-title'),bodyEl=$('#f-body');
+  d.title=(titleEl?titleEl.value:d.title).trim();if(bodyEl)d.body=bodyEl.value;
+  if(!d.title){toast('Give the task a name first.');titleEl&&titleEl.focus();return;}
+  if(uploading[d.id]){toast('Wait for the uploads to finish.');return;}
+  clearTimeout(timers['title'+d.id]);clearTimeout(timers['body'+d.id]);
+  const btn=$('#f-create');if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  const now=new Date().toISOString();
+  const row=Object.assign({},d,{created_at:now,updated_at:now,created_by:me.id,updated_by:me.id});
+  const {error}=await sb.from('tasks').insert(row);
+  if(error){if(btn){btn.disabled=false;btn.textContent='Create task';}handleErr(error);return;}
+  draft=null;confirmDiscard=false;
+  if(!tasks.some(x=>x.id===row.id))tasks.push(row);
+  closePanel();render();
+  toast(`Task created${row.week&&row.week!==filter.week&&filter.week!=='all'?' in '+wkName(row.week).replace(/^Week of /,'week of '):''}`);}
+function discardDraft(){
+  const d=draft;if(!d)return;
+  const paths=(d.files||[]).filter(x=>x.kind!=='link'&&x.path).map(x=>x.path);
+  if(paths.length)sb.storage.from(BUCKET).remove(paths);
+  draft=null;confirmDiscard=false;}
+function requestClose(){
+  if(draft&&draftHasContent()){confirmDiscard=true;syncPanel();const c=$('#f-discard');c&&c.scrollIntoView({block:'nearest'});return;}
+  if(draft)discardDraft();
+  closePanel();}
 function setStatus(id,status){
-  const t=tasks.find(x=>x.id===id);if(!t||t.status===status)return;
+  const t=getTask(id);if(!t||t.status===status)return;
   const patch={status};
   if(status!=='blocked')patch.blocker=null;
   else if(!t.blocker&&blockerList[0])patch.blocker=blockerList[0].id;
@@ -394,7 +427,7 @@ function inWeek(t){
   if(filter.week==='none')return !t.week;
   return t.week===filter.week;}
 function moveToWeek(id,week){
-  const t=tasks.find(x=>x.id===id);if(!t||t.week===week)return;
+  const t=getTask(id);if(!t||t.week===week)return;
   write(id,{week});render();if(openId===id)syncPanel();
   if(filter.week!=='all'&&week!==filter.week)toast('Moved to '+wkName(week).replace(/^Week of /,'week of '));}
 function visible(t){
@@ -539,7 +572,7 @@ const MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',w
   ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',zip:'application/zip'};
 function extOf(n){const m=/\.([a-z0-9]+)$/i.exec(n||'');return m?m[1].toLowerCase():'';}
 function fmtSize(b){if(!b&&b!==0)return '';if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(0)+' KB';if(b<1073741824)return (b/1048576).toFixed(1)+' MB';return (b/1073741824).toFixed(2)+' GB';}
-function currentFiles(id){const t=tasks.find(x=>x.id===id);return ((t&&t.files)||[]).slice();}
+function currentFiles(id){const t=getTask(id);return ((t&&t.files)||[]).slice();}
 async function signedUrl(path,download){
   if(!download){const c=urlCache[path];if(c&&c.exp>Date.now())return c.url;}
   const {data,error}=await sb.storage.from(BUCKET).createSignedUrl(path,download?120:3600,download?{download}:undefined);
@@ -607,20 +640,20 @@ function fileTile(t,it){
 
 /* ---------- task panel ---------- */
 function closePanel(){openId=null;confirmDelete=false;closePicker();$('#layer').replaceChildren();}
-function openPanel(id,focusTitle){teamOpen=false;removing=null;openId=id;confirmDelete=false;buildPanel();if(focusTitle)setTimeout(()=>{const t=$('#f-title');t&&t.focus();});}
+function openPanel(id,focusTitle){if(draft&&draft.id!==id){requestClose();if(draft)return;}teamOpen=false;removing=null;openId=id;confirmDelete=false;buildPanel();if(focusTitle)setTimeout(()=>{const t=$('#f-title');t&&t.focus();});}
 function autosize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
 function buildPanel(){
-  const t=tasks.find(x=>x.id===openId);const layer=$('#layer');
+  const t=getTask(openId);const layer=$('#layer');
   if(!t){layer.replaceChildren();return;}
   const title=h('textarea',{id:'f-title',rows:'1','aria-label':'Task name',placeholder:'Task name',
-    oninput:e=>{autosize(e.target);debounced('title'+t.id,500,()=>write(t.id,{title:e.target.value.trim()}).then(render));},
+    oninput:e=>{autosize(e.target);const tk=getTask(t.id);if(tk)tk.title=e.target.value;debounced('title'+t.id,500,()=>write(t.id,{title:e.target.value.trim()}).then(render));},
     onkeydown:e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur();}}});
   const assignBtn=h('button',{class:'picker-btn',id:'f-assignee',onclick:e=>openPicker(e.currentTarget,a=>{write(t.id,{assignee:a});render();syncPanel();})});
   const due=h('input',{class:'inp',type:'date',id:'f-due',onchange:e=>{write(t.id,{due:e.target.value||null});render();}});
   const body=h('textarea',{class:'inp',id:'f-body',placeholder:'Add details, links, notes…',
-    oninput:e=>debounced('body'+t.id,700,()=>write(t.id,{body:e.target.value}).then(render))});
+    oninput:e=>{const tk=getTask(t.id);if(tk)tk.body=e.target.value;debounced('body'+t.id,700,()=>write(t.id,{body:e.target.value}).then(render));}});
   const subIn=h('input',{class:'inp',id:'f-newsub',placeholder:'Add a subtask',onkeydown:e=>{if(e.key==='Enter'){e.preventDefault();addSub();}}});
-  function addSub(){const v=subIn.value.trim();if(!v)return;const cur=(tasks.find(x=>x.id===t.id).subtasks||[]).slice();
+  function addSub(){const v=subIn.value.trim();if(!v)return;const cur=(getTask(t.id).subtasks||[]).slice();
     cur.push({id:uid(),text:v,done:false,assignee:null});subIn.value='';write(t.id,{subtasks:cur});render();syncPanel();subIn.focus();}
   const fileInput=h('input',{type:'file',id:'f-upload',multiple:true,hidden:true,onchange:e=>{uploadFiles(t.id,[...e.target.files]);e.target.value='';}});
   const linkForm=h('div',{class:'linkform',id:'f-linkform',hidden:true},
@@ -637,7 +670,7 @@ function buildPanel(){
     h('button',{class:'btn ghost',text:'Add a link',onclick:()=>{linkForm.hidden=false;$('#f-linkurl').focus();}}),
     fileInput);
   const panel=h('aside',{class:'panel',role:'dialog','aria-modal':'true','aria-label':'Edit task'},
-    h('div',{class:'panel-h'},h('span',{class:'crumb',id:'f-crumb'}),h('button',{class:'btn ghost',text:'Close',onclick:closePanel})),
+    h('div',{class:'panel-h'},h('span',{class:'crumb',id:'f-crumb'}),h('button',{class:'btn ghost',text:'Close',onclick:requestClose})),
     h('div',{class:'panel-b'},title,
       h('div',{class:'fields'},
         h('label',{text:'Type'}),h('div',{class:'types',role:'group','aria-label':'Type',id:'f-type'}),
@@ -653,16 +686,16 @@ function buildPanel(){
         h('div',{class:'files',id:'f-files'}),h('div',{class:'flabel',id:'f-filenote',hidden:true,style:'margin-top:8px;text-transform:none;letter-spacing:0'}),drop,linkForm),
       h('div',{class:'footmeta',id:'f-foot'})));
   panel.addEventListener('paste',e=>{const fs=[...((e.clipboardData&&e.clipboardData.files)||[])];if(fs.length){e.preventDefault();uploadFiles(t.id,fs);}});
-  layer.replaceChildren(h('div',{class:'scrim',onclick:closePanel}),panel);
+  layer.replaceChildren(h('div',{class:'scrim',onclick:requestClose}),panel);
   syncPanel(true);}
 function syncPanel(first){
-  const t=tasks.find(x=>x.id===openId);if(!t){if(openId)closePanel();return;}
+  const t=getTask(openId);if(!t){if(openId)closePanel();return;}
   if(!$('#f-title'))return;
   const act=document.activeElement;
   const title=$('#f-title');if(first||act!==title){title.value=t.title||'';autosize(title);}
   const body=$('#f-body');if(first||act!==body)body.value=t.body||'';
   const due=$('#f-due');if(act!==due)due.value=t.due||'';
-  $('#f-crumb').textContent=(STATUSES.find(s=>s.id===t.status)||STATUSES[0]).label.toUpperCase();
+  $('#f-crumb').textContent=draft&&draft.id===t.id?'NEW TASK · NOT ON THE BOARD YET':(STATUSES.find(s=>s.id===t.status)||STATUSES[0]).label.toUpperCase();
   // type
   $('#f-type').replaceChildren(...TYPES.map(ty=>{const i=h('i');i.style.background=ty.color;
     return h('button',{class:'tp','aria-pressed':t.type===ty.id?'true':'false',onclick:()=>{write(t.id,{type:t.type===ty.id?null:ty.id});render();syncPanel();}},i,ty.label);}));
@@ -702,7 +735,7 @@ function syncPanel(first){
   const box=$('#f-subs');
   if(!(act&&box.contains(act)&&act.classList.contains('stext'))){
     box.replaceChildren(...subs.map(s=>{
-      const upd=fn=>{const cur=(tasks.find(x=>x.id===t.id).subtasks||[]).map(x=>Object.assign({},x));const it=cur.find(x=>x.id===s.id);if(!it)return;fn(it,cur);write(t.id,{subtasks:cur});render();syncPanel();};
+      const upd=fn=>{const cur=(getTask(t.id).subtasks||[]).map(x=>Object.assign({},x));const it=cur.find(x=>x.id===s.id);if(!it)return;fn(it,cur);write(t.id,{subtasks:cur});render();syncPanel();};
       return h('div',{class:'subrow'+(s.done?' done':'')},
         h('input',{type:'checkbox',id:'sub-'+s.id,checked:s.done,'aria-label':'Done',onchange:e=>upd(it=>{it.done=e.target.checked;})}),
         h('input',{class:'stext',id:'subtext-'+s.id,value:s.text,'aria-label':'Subtask',
@@ -718,6 +751,15 @@ function syncPanel(first){
   const note=$('#f-filenote');const up=uploading[t.id]||0;note.hidden=!up;note.textContent=up?`Uploading ${up} ${up===1?'file':'files'}…`:'';
   $('#f-files').replaceChildren(...files.map(it=>fileTile(t,it)));
   // footer
+  if(draft&&draft.id===t.id){
+    const create=h('button',{class:'btn primary',id:'f-create',text:'Create task',onclick:saveDraft});
+    $('#f-foot').replaceChildren(confirmDiscard
+      ?h('div',{class:'confirm',id:'f-discard',style:'width:100%'},'Discard this new task? Nothing has been saved.',
+          h('button',{class:'btn danger',text:'Discard',onclick:()=>{discardDraft();closePanel();}}),
+          h('button',{class:'btn ghost',text:'Keep editing',onclick:()=>{confirmDiscard=false;syncPanel();}}))
+      :h('div',{class:'createbar'},h('span',{text:'This task isn\u2019t on the board until you create it.'}),
+          h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn ghost',text:'Cancel',onclick:requestClose}),create)));
+    return;}
   const when=v=>v?new Date(v).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
   const parts=[];
   if(t.created_at)parts.push(h('span',{text:`Created ${when(t.created_at)}${t.created_by?' by '+aname(t.created_by):''}`}));
@@ -737,7 +779,7 @@ function syncPanel(first){
 /* ---------- team roster ---------- */
 const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 let editingMember=null,removingMember=null;
-function openTeam(){closePanel();teamOpen=true;buildTeam();}
+function openTeam(){if(draft){requestClose();if(draft)return;}closePanel();teamOpen=true;buildTeam();}
 function closeTeam(){teamOpen=false;editingMember=null;removingMember=null;$('#layer').replaceChildren();}
 function readMemberForm(prefix,excludeId){
   const name=$('#'+prefix+'-name').value.trim(),email=$('#'+prefix+'-email').value.trim().toLowerCase(),nickname=$('#'+prefix+'-nick').value.trim();
@@ -895,7 +937,7 @@ $('#wk-today').addEventListener('click',()=>{filter.week=wkId(new Date());render
 $('#new').addEventListener('click',()=>createTask('queue'));
 $('#team').addEventListener('click',openTeam);
 $('#signout').addEventListener('click',signOut);
-document.addEventListener('keydown',e=>{if(e.key!=='Escape'||pop||document.querySelector('.lightbox'))return;if(openId)closePanel();else if(teamOpen)closeTeam();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape'||pop||document.querySelector('.lightbox'))return;if(openId)requestClose();else if(teamOpen)closeTeam();});
 
 async function start(){
   if(/^PASTE/.test(SUPABASE_URL)||/^PASTE/.test(SUPABASE_ANON_KEY)||!window.supabase){showGate('setup');return;}
