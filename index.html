@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Entegro Team Board</title>
+<title>Entegro Health's Team Board</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23004f59'/%3E%3Crect x='6' y='8' width='5' height='16' rx='2' fill='%23a4d65e'/%3E%3Crect x='13.5' y='8' width='5' height='11' rx='2' fill='%23bbdde6'/%3E%3Crect x='21' y='8' width='5' height='7' rx='2' fill='%23a9b99e'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: sticky toolbar + blocker summary, five status columns that scroll sideways on phones, edit panel slides in from the right */
 :root{
@@ -239,6 +239,183 @@ html,body{margin:0}
 #f-foot{position:sticky;bottom:0;background:var(--surface)}
 .btn.flourish{padding:9px 22px;font-family:var(--f-display);letter-spacing:.02em}
 
+/* ==================================================================
+   "Garden party" theme: soft brand-tinted canvas, each status column
+   wears its own pastel, chunky rounded controls, playful details.
+   Status colors: Queue gray · Ready blue · In progress yellow ·
+                  Blocked red · Complete green
+   ================================================================== */
+:root{
+  --f-display:"Bricolage Grotesque","Figtree",ui-sans-serif,system-ui,sans-serif;
+  --bg:#f4f7f2; --surface:#ffffff; --sunk:#eef2ec; --line:#dfe6dc; --fg:#17302e; --muted:#5e716d;
+  --accent:#004f59; --accent-fg:#ffffff; --accent-soft:#dff0ee; --lime:#a4d65e; --lime-ink:#1f3a10; --sky:#bbdde6;
+  /* status: strong (dots, pills) / tint (column) / ink (text on tint) */
+  --s-queue:#8a94a3;    --t-queue:#eef0f4;    --i-queue:#3d4552;
+  --s-ready:#3b8fe0;    --t-ready:#e5f0fd;    --i-ready:#1d4f84;
+  --s-progress:#f2b81c; --t-progress:#fff5d4; --i-progress:#6b4d00;
+  --s-blocked:#e5534b;  --t-blocked:#fde7e5;  --i-blocked:#8c231d;
+  --s-complete:#3fa860; --t-complete:#e2f5e7; --i-complete:#1e5e31;
+  --blocked-soft:#fde7e5; --danger:#c8352d;
+  --shadow:0 1px 1px rgba(23,48,46,.04),0 4px 14px -4px rgba(23,48,46,.12);
+  --shadow-lift:0 2px 3px rgba(23,48,46,.06),0 14px 28px -10px rgba(23,48,46,.25);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1a1b; --surface:#172527; --sunk:#132022; --line:#263a3c; --fg:#e4efec; --muted:#93a8a4;
+  --accent:#6cc2cd; --accent-fg:#062a2e; --accent-soft:#183a3e; --lime:#b6e27a; --lime-ink:#1a300c; --sky:#2b4a52;
+  --s-queue:#9aa4b4;    --t-queue:#1c2329;    --i-queue:#c9d0db;
+  --s-ready:#66adf0;    --t-ready:#132638;    --i-ready:#b9d9f8;
+  --s-progress:#f5c94a; --t-progress:#2d2510; --i-progress:#f8df98;
+  --s-blocked:#f07b74;  --t-blocked:#331a19;  --i-blocked:#f8bdb8;
+  --s-complete:#6cc787; --t-complete:#142a1b; --i-complete:#b8e8c5;
+  --blocked-soft:#331a19; --danger:#f28b84;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 6px 16px -6px rgba(0,0,0,.5);
+  --shadow-lift:0 2px 4px rgba(0,0,0,.35),0 16px 30px -12px rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a1b; --surface:#172527; --sunk:#132022; --line:#263a3c; --fg:#e4efec; --muted:#93a8a4;
+  --accent:#6cc2cd; --accent-fg:#062a2e; --accent-soft:#183a3e; --lime:#b6e27a; --lime-ink:#1a300c; --sky:#2b4a52;
+  --s-queue:#9aa4b4;    --t-queue:#1c2329;    --i-queue:#c9d0db;
+  --s-ready:#66adf0;    --t-ready:#132638;    --i-ready:#b9d9f8;
+  --s-progress:#f5c94a; --t-progress:#2d2510; --i-progress:#f8df98;
+  --s-blocked:#f07b74;  --t-blocked:#331a19;  --i-blocked:#f8bdb8;
+  --s-complete:#6cc787; --t-complete:#142a1b; --i-complete:#b8e8c5;
+  --blocked-soft:#331a19; --danger:#f28b84;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 6px 16px -6px rgba(0,0,0,.5);
+  --shadow-lift:0 2px 4px rgba(0,0,0,.35),0 16px 30px -12px rgba(0,0,0,.6); color-scheme:dark}
+
+/* canvas: soft brand blobs behind everything */
+body{background:var(--bg)}
+#app::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(520px 340px at 8% -6%,color-mix(in srgb,var(--sky) 70%,transparent),transparent 70%),
+    radial-gradient(460px 320px at 96% 4%,color-mix(in srgb,var(--lime) 34%,transparent),transparent 70%),
+    radial-gradient(600px 420px at 70% 110%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 70%),
+    var(--bg)}
+#app{position:relative;isolation:isolate}
+
+/* header */
+header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.brand{align-items:center;gap:12px}
+.title-wrap{position:relative;padding-bottom:8px}
+.brand h1{font:800 clamp(1.25rem,1rem + 1.1vw,1.7rem)/1.05 var(--f-display);letter-spacing:-.02em;color:var(--fg)}
+.brand h1 .hl{color:var(--accent)}
+.squiggle{position:absolute;left:0;bottom:0;width:100%;height:9px;color:var(--lime)}
+.brand .count{font:600 .74rem var(--f-mono);color:var(--muted);background:var(--surface);border:1px solid var(--line);padding:4px 10px;border-radius:999px;white-space:nowrap}
+
+/* controls: chunky and round */
+.inp{border-radius:12px;border-color:var(--line);background:var(--surface)}
+.btn{border-radius:12px;font-weight:700;transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.primary,.btn.flourish{background:var(--lime);border-color:transparent;color:var(--lime-ink);box-shadow:0 2px 0 color-mix(in srgb,var(--lime) 55%,#000 45%)}
+.btn.primary:hover,.btn.flourish:hover{box-shadow:0 3px 0 color-mix(in srgb,var(--lime) 55%,#000 45%),var(--shadow)}
+.btn.ghost:hover{box-shadow:none;background:var(--sunk)}
+#team{border-radius:999px}
+#new{border-radius:999px;padding:8px 18px}
+.wk-nav{border-radius:999px;box-shadow:var(--shadow);border-color:transparent}
+.wk-nav select{font:700 .92rem var(--f-display)}
+.carry{border-radius:14px;background:color-mix(in srgb,var(--s-progress) 22%,var(--surface));color:var(--fg)}
+
+/* blocked summary chips follow the red status */
+.chip.blk{background:var(--t-blocked);color:var(--i-blocked);border:1px solid color-mix(in srgb,var(--s-blocked) 30%,transparent)}
+.chip.on{outline:2px solid var(--s-blocked);outline-offset:1px}
+
+/* columns: each status wears its own pastel */
+.cols{gap:14px}
+.col{--c:var(--s-queue);--tint:var(--t-queue);--ink:var(--i-queue);
+  background:var(--tint);border-radius:20px;padding:12px;gap:10px;border:1px solid color-mix(in srgb,var(--c) 22%,transparent);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 50%,transparent)}
+.col[data-status="ready"]{--c:var(--s-ready);--tint:var(--t-ready);--ink:var(--i-ready)}
+.col[data-status="progress"]{--c:var(--s-progress);--tint:var(--t-progress);--ink:var(--i-progress)}
+.col[data-status="blocked"]{--c:var(--s-blocked);--tint:var(--t-blocked);--ink:var(--i-blocked)}
+.col[data-status="complete"]{--c:var(--s-complete);--tint:var(--t-complete);--ink:var(--i-complete)}
+.col.drop{outline:2.5px dashed var(--c);outline-offset:-3px}
+.col-h{padding:2px 2px 6px;gap:8px}
+.col-h .dot{width:12px;height:12px;border-radius:4px;transform:rotate(45deg);background:var(--c)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 25%,transparent)}
+.col-h h2{font:800 1rem/1 var(--f-display);color:var(--ink);letter-spacing:-.01em}
+.col-h .n{font:700 .74rem var(--f-mono);color:var(--ink);background:color-mix(in srgb,var(--c) 22%,var(--surface));padding:3px 9px;border-radius:999px;min-width:26px;text-align:center}
+.col-h .n{margin-right:auto}
+.col-h .add{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--ink);background:color-mix(in srgb,var(--surface) 70%,transparent);font-size:1.15rem;font-weight:700;padding:0}
+.col-h .add:hover{background:var(--c);color:var(--surface)}
+.col[data-status="progress"] .col-h .add:hover{color:var(--i-progress);background:var(--s-progress)}
+.empty{color:var(--ink);opacity:.7;border:1.5px dashed color-mix(in srgb,var(--c) 40%,transparent);border-radius:14px;padding:16px 10px}
+
+/* cards: white tiles that lift and tilt a touch on hover */
+.card{border-radius:16px;border:1px solid color-mix(in srgb,var(--line) 80%,transparent);padding:12px 14px;gap:8px;
+  transition:transform .16s cubic-bezier(.3,1.4,.5,1),box-shadow .16s ease,border-color .16s ease}
+.card:hover{transform:translateY(-3px) rotate(-.5deg);box-shadow:var(--shadow-lift);border-color:color-mix(in srgb,var(--c,var(--accent)) 45%,transparent)}
+.col .card{--c:inherit}
+.card .t{font:700 1rem/1.3 var(--f-display);letter-spacing:-.005em}
+.card.done{opacity:.78}
+.card.done:hover{opacity:1}
+.card.dragging{transform:rotate(2deg) scale(.98)}
+.bar{height:6px;border-radius:3px;background:var(--sunk)}
+.bar i{background:linear-gradient(90deg,var(--s-complete),var(--lime));border-radius:3px}
+.meta .due.late{color:var(--danger);font-weight:700}
+.who .av{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px color-mix(in srgb,var(--fg) 12%,transparent)}
+
+/* type tags: tinted pill in their own color */
+.type{border-radius:999px;padding:3px 10px 3px 8px;font-weight:700;background:var(--sunk)}
+.type i{border-radius:50%}
+
+/* edit panel */
+.panel{border-radius:22px 0 0 22px;border-left:0}
+.panel-h{border-bottom:1px dashed var(--line)}
+.panel-h .crumb{font-weight:700}
+#f-title{font:800 1.4rem/1.25 var(--f-display);letter-spacing:-.015em}
+.st,.tp{border-radius:999px;font-weight:700;transition:transform .1s ease}
+.st:hover,.tp:hover{transform:translateY(-1px)}
+.st .dot{width:10px;height:10px}
+.tp i{border-radius:50%}
+/* status pills light up in their own color when chosen */
+.st[aria-pressed="true"]{border-color:transparent}
+.picker-btn{border-radius:999px}
+.drop{border-radius:16px}
+.file{border-radius:12px}
+.createbar{border-radius:16px;background:color-mix(in srgb,var(--lime) 26%,var(--surface))}
+.confirm{border-radius:12px}
+.pop{border-radius:16px}
+.toast{border-radius:999px;padding:10px 18px;font-weight:600;box-shadow:var(--shadow-lift)}
+
+/* sign-in card */
+.gate-card{border-radius:24px}
+.gate-card h1{font-weight:800}
+#gate{background:
+  radial-gradient(600px 380px at 10% 0%,color-mix(in srgb,var(--sky) 70%,transparent),transparent 70%),
+  radial-gradient(520px 360px at 95% 100%,color-mix(in srgb,var(--lime) 35%,transparent),transparent 70%),var(--bg)}
+
+@media (prefers-reduced-motion:reduce){.card,.btn,.st,.tp{transition:none}.card:hover,.btn:hover{transform:none}}
+.st[aria-pressed="true"][data-status="queue"]{background:var(--s-queue);color:#fff}
+.st[aria-pressed="true"][data-status="ready"]{background:var(--s-ready);color:#fff}
+.st[aria-pressed="true"][data-status="progress"]{background:var(--s-progress);color:#3a2a00}
+.st[aria-pressed="true"][data-status="blocked"]{background:var(--s-blocked);color:#fff}
+.st[aria-pressed="true"][data-status="complete"]{background:var(--s-complete);color:#fff}
+.st[aria-pressed="true"] .dot{background:currentColor!important;opacity:.85}
+.type{background:color-mix(in srgb,var(--tc,var(--muted)) 15%,var(--surface));color:color-mix(in srgb,var(--tc,var(--fg)) 70%,var(--fg))}
+.tp[aria-pressed="true"]{background:var(--tc);border-color:transparent;color:#fff}
+.tp[aria-pressed="true"] i{background:#fff!important}
+
+/* urgency: Urgent red-orange, Mid amber, Low calm blue-gray */
+:root{--u-urgent:#e5482f;--u-mid:#e39b12;--u-low:#7f93a8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--u-urgent:#ff7a63;--u-mid:#f5c050;--u-low:#9fb2c5}}
+:root[data-theme="dark"]{--u-urgent:#ff7a63;--u-mid:#f5c050;--u-low:#9fb2c5}
+[data-urg="urgent"]{--u:var(--u-urgent)}[data-urg="mid"]{--u:var(--u-mid)}[data-urg="low"]{--u:var(--u-low)}
+.urg{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  padding:3px 9px 3px 7px;border-radius:999px;color:color-mix(in srgb,var(--u) 75%,var(--fg));background:color-mix(in srgb,var(--u) 16%,var(--surface));
+  border:1px solid color-mix(in srgb,var(--u) 35%,transparent)}
+.urg b{font-size:.7rem;letter-spacing:-.08em}
+.urg[data-urg="urgent"]{background:var(--u);color:#fff;border-color:transparent;box-shadow:0 2px 8px -2px color-mix(in srgb,var(--u) 60%,transparent)}
+.card:has(.urg[data-urg="urgent"]){border-color:color-mix(in srgb,var(--u-urgent) 45%,transparent)}
+.urgs{display:flex;flex-wrap:wrap;gap:6px}
+.up{border:1.5px solid color-mix(in srgb,var(--u) 40%,var(--line));background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 14px 4px 11px;
+  font-size:.84rem;font-weight:700;display:inline-flex;align-items:center;gap:6px;transition:transform .1s ease}
+.up b{color:var(--u);letter-spacing:-.08em}
+.up:hover{transform:translateY(-1px)}
+.up[aria-pressed="true"]{background:var(--u);border-color:transparent;color:#fff}
+.up[aria-pressed="true"] b{color:#fff}
+.up[data-urg="mid"][aria-pressed="true"]{color:#3a2600}
+.up[data-urg="mid"][aria-pressed="true"] b{color:#3a2600}
+@media (prefers-reduced-motion:reduce){.up{transition:none}.up:hover{transform:none}}
+
 </style>
 </head>
 <body>
@@ -246,14 +423,14 @@ html,body{margin:0}
 <div id="gate" hidden>
   <div class="gate-card">
     <div class="mark" aria-hidden="true"><i style="background:#004f59"></i><i style="background:#4298b5"></i><i style="background:#a4d65e"></i></div>
-    <div id="gate-body"><h1>Entegro Team Board</h1><p>Loading…</p></div>
+    <div id="gate-body"><h1>Entegro Health&rsquo;s Team Board</h1><p>Loading…</p></div>
   </div>
 </div>
 
 <div id="app" hidden>
 <header class="top wrap">
   <div class="top-row">
-    <div class="brand"><h1>Entegro Team Board</h1><span class="count" id="count"></span></div>
+    <div class="brand"><div class="title-wrap"><h1>Entegro Health&rsquo;s <span class="hl">Team Board</span></h1><svg class="squiggle" viewBox="0 0 220 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8 C 20 1, 34 13, 52 7 S 86 1, 104 7 S 138 13, 156 7 S 190 1, 218 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg></div><span class="count" id="count"></span></div>
     <div class="tools">
       <input class="inp" id="q" type="search" placeholder="Search tasks" aria-label="Search tasks">
       <select class="inp" id="type" aria-label="Filter by type"></select>
@@ -313,6 +490,12 @@ const TYPES=[
   {id:'sales',label:'Sales',color:'#7a5bc7'},
   {id:'other',label:'Others',color:'#8a9a7f'}];
 const typeOf=id=>TYPES.find(t=>t.id===id)||null;
+const URGENCY=[
+  {id:'urgent',label:'Urgent',icon:'\u2191\u2191'},
+  {id:'mid',label:'Mid',icon:'\u2191'},
+  {id:'low',label:'Low',icon:'\u2193'}];
+const urgencyOf=id=>URGENCY.find(u=>u.id===id)||null;
+const URG_RANK={urgent:0,mid:1,low:2};
 
 /* weeks run Monday to Sunday; a week is stored as its Monday (YYYY-MM-DD) */
 function pad(n){return String(n).padStart(2,'0');}
@@ -375,7 +558,7 @@ async function createTask(status){
   const id=uid();
   const week=/^\d{4}-\d\d-\d\d$/.test(filter.week)?filter.week:wkId(new Date());
   const type=filter.type!=='all'&&filter.type!=='none'?filter.type:null;
-  const row={id,title:'',body:'',status:status||'queue',blocker:null,type,week,due:null,assignee:null,subtasks:[],files:[],
+  const row={id,title:'',body:'',status:status||'queue',blocker:null,type,priority:null,week,due:null,assignee:null,subtasks:[],files:[],
     created_by:me.id,updated_by:me.id,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
   if(draft)discardDraft();
   draft=row;openPanel(id,true);}
@@ -391,7 +574,7 @@ async function saveDraft(){
   clearTimeout(timers['title'+d.id]);clearTimeout(timers['body'+d.id]);
   const btn=$('#f-create');if(btn){btn.disabled=true;btn.textContent='Creating…';}
   const now=new Date().toISOString();
-  const row=Object.assign({},d,{created_at:now,updated_at:now,created_by:me.id,updated_by:me.id});
+  const row=Object.assign({},d,{created_at:now,updated_at:now,created_by:me.id,updated_by:me.id});if(!row.priority)delete row.priority;
   const {error}=await sb.from('tasks').insert(row);
   if(error){if(btn){btn.disabled=false;btn.textContent='Flourish';}handleErr(error);return;}
   draft=null;confirmDiscard=false;
@@ -445,16 +628,18 @@ function visible(t){
 function fmtDue(d){if(!d)return null;const dt=new Date(d+'T00:00:00');if(isNaN(dt))return null;
   return dt.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 function isLate(t){if(!t.due||t.status==='complete')return false;const today=new Date();today.setHours(0,0,0,0);return new Date(t.due+'T00:00:00')<today;}
-function typeChip(id){const ty=typeOf(id);const i=h('i');i.style.background=ty.color;return h('span',{class:'type'},i,ty.label);}
+function urgChip(id){const u=urgencyOf(id);return h('span',{class:'urg','data-urg':id,title:u.label+' urgency'},h('b',{text:u.icon}),u.label);}
+function typeChip(id){const ty=typeOf(id);const i=h('i');i.style.background=ty.color;const c=h('span',{class:'type'},i,ty.label);c.style.setProperty('--tc',ty.color);return c;}
 const ts=v=>v?new Date(v).getTime():0;
 
 function card(t){
   const subs=t.subtasks||[];const done=subs.filter(s=>s.done).length;
-  const c=h('button',{class:'card'+(t.status==='complete'?' done':''),draggable:'true','data-id':t.id,
+  const c=h('button',{class:'card'+(t.status==='complete'?' done':''),'data-status':t.status,draggable:'true','data-id':t.id,
     onclick:()=>openPanel(t.id),
     ondragstart:e=>{dragId=t.id;c.classList.add('dragging');e.dataTransfer.setData('text/plain',t.id);e.dataTransfer.effectAllowed='move';},
     ondragend:()=>{dragId=null;c.classList.remove('dragging');document.querySelectorAll('.col.drop').forEach(x=>x.classList.remove('drop'));}},
-    (typeOf(t.type)||(filter.week==='all'))?h('div',{class:'meta'},
+    (typeOf(t.type)||urgencyOf(t.priority)||(filter.week==='all'))?h('div',{class:'meta'},
+      urgencyOf(t.priority)?urgChip(t.priority):null,
       typeOf(t.type)?typeChip(t.type):null,
       filter.week==='all'?h('span',{class:'wk-tag',text:t.week?wkShort(t.week):'No week'}):null):null,
     h('div',{class:'t'+(t.title?'':' untitled'),text:t.title||'Untitled task'}),
@@ -522,9 +707,9 @@ function render(){
   const total=scope.length,open=scope.filter(t=>t.status!=='complete').length;
   $('#count').textContent=loaded?`${open} open · ${total} total`:'';
   for(const s of STATUSES){
-    const list=shown.filter(t=>(t.status||'queue')===s.id).sort((a,b)=>ts(b.updated_at)-ts(a.updated_at));
+    const list=shown.filter(t=>(t.status||'queue')===s.id).sort((a,b)=>((URG_RANK[a.priority]??3)-(URG_RANK[b.priority]??3))||(ts(b.updated_at)-ts(a.updated_at)));
     const dot=h('span',{class:'dot'});dot.style.background=statusColor(s.id);
-    const col=h('section',{class:'col','aria-label':s.label,
+    const col=h('section',{class:'col','data-status':s.id,'aria-label':s.label,
       ondragover:e=>{if(!dragId)return;e.preventDefault();col.classList.add('drop');},
       ondragleave:e=>{if(!col.contains(e.relatedTarget))col.classList.remove('drop');},
       ondrop:e=>{e.preventDefault();col.classList.remove('drop');const id=e.dataTransfer.getData('text/plain')||dragId;if(id)setStatus(id,s.id);}},
@@ -675,6 +860,7 @@ function buildPanel(){
     h('div',{class:'panel-b'},title,
       h('div',{class:'fields'},
         h('label',{text:'Type'}),h('div',{class:'types',role:'group','aria-label':'Type',id:'f-type'}),
+        h('label',{text:'Urgency'}),h('div',{class:'urgs',role:'group','aria-label':'Urgency',id:'f-urg'}),
         h('label',{text:'Week'}),h('div',{class:'wkfield',id:'f-week'}),
         h('label',{text:'Status'}),h('div',{class:'statuses',role:'group','aria-label':'Status',id:'f-status'}),
         h('label',{text:'Blocked by',id:'f-blocklabel'}),h('div',{class:'blockrow',id:'f-blockrow'}),
@@ -699,7 +885,7 @@ function syncPanel(first){
   $('#f-crumb').textContent=draft&&draft.id===t.id?'NEW TASK · NOT ON THE BOARD YET':(STATUSES.find(s=>s.id===t.status)||STATUSES[0]).label.toUpperCase();
   // type
   $('#f-type').replaceChildren(...TYPES.map(ty=>{const i=h('i');i.style.background=ty.color;
-    return h('button',{class:'tp','aria-pressed':t.type===ty.id?'true':'false',onclick:()=>{write(t.id,{type:t.type===ty.id?null:ty.id});render();syncPanel();}},i,ty.label);}));
+    return h('button',{class:'tp',style:'--tc:'+ty.color,'aria-pressed':t.type===ty.id?'true':'false',onclick:()=>{write(t.id,{type:t.type===ty.id?null:ty.id});render();syncPanel();}},i,ty.label);}));
   // week
   const wf=$('#f-week');
   if(!(act&&wf.contains(act)&&act.type==='date')){
@@ -712,8 +898,11 @@ function syncPanel(first){
       h('input',{class:'inp',type:'date',id:'f-weekdate','aria-label':'Move to the week of a date',title:'Move to the week of a date',
         onchange:e=>{if(e.target.value)moveToWeek(t.id,wkId(new Date(e.target.value+'T00:00:00')));}})].filter(Boolean));}
   // status
+  $('#f-urg').replaceChildren(...URGENCY.map(u=>h('button',{class:'up','data-urg':u.id,'aria-pressed':t.priority===u.id?'true':'false',
+    title:t.priority===u.id?'Click again to clear':'Set urgency to '+u.label,
+    onclick:()=>{write(t.id,{priority:t.priority===u.id?null:u.id});render();syncPanel();}},h('b',{text:u.icon}),u.label)));
   $('#f-status').replaceChildren(...STATUSES.map(s=>{const d=h('span',{class:'dot'});d.style.background=statusColor(s.id);
-    return h('button',{class:'st','aria-pressed':t.status===s.id?'true':'false',onclick:()=>setStatus(t.id,s.id)},d,s.label);}));
+    return h('button',{class:'st','data-status':s.id,'aria-pressed':t.status===s.id?'true':'false',onclick:()=>setStatus(t.id,s.id)},d,s.label);}));
   // blocker
   const br=$('#f-blockrow'),bl=$('#f-blocklabel');const isB=t.status==='blocked';br.hidden=!isB;bl.hidden=!isB;
   if(isB&&!(act&&br.contains(act))){
@@ -910,7 +1099,7 @@ function showGate(mode,detail){
       showGate('sent',v);
     }catch(err){msg.textContent=/rate|too many|seconds/i.test(err.message||'')?'Too many sign-in emails were sent recently. Wait a few minutes and try again.':'Couldn’t send the link. Check your connection and try again.';msg.hidden=false;console.error(err);}
     finally{btn.disabled=false;}}},email,btn,msg);
-  box.replaceChildren(h('h1',{text:'Entegro Team Board'}),h('p',{text:'Sign in with your work email. We’ll send you a link; no password needed.'}),form);
+  box.replaceChildren(h('h1',{text:'Entegro Health\u2019s Team Board'}),h('p',{text:'Sign in with your work email. We’ll send you a link; no password needed.'}),form);
   setTimeout(()=>email.focus());}
 async function signOut(){try{await sb.auth.signOut();}catch(e){}me=null;session=null;tasks=[];members=[];loaded=false;closePanel();showGate('signin');}
 let entering=false;
