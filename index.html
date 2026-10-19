@@ -499,6 +499,38 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
 .file .fa{flex-wrap:wrap;row-gap:2px}
 .file .fn,.file .fs{padding-right:8px}
 
+/* subtasks follow their assignee */
+.mysubs{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--lime) 16%,var(--surface));
+  border:1px solid color-mix(in srgb,var(--lime) 45%,transparent);cursor:default}
+.mysubs-h{font:700 .7rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--lime-ink)}
+.mysub{display:flex;align-items:flex-start;gap:8px;font-size:.86rem;line-height:1.35;cursor:pointer}
+.mysub input{width:16px;height:16px;margin-top:1px;accent-color:var(--s-complete);flex:none}
+.mysub span{overflow-wrap:anywhere}
+.mysub.done span{text-decoration:line-through;color:var(--muted)}
+.helpers{display:inline-flex;margin-right:2px}
+.helpers .av{width:20px;height:20px;font-size:.55rem;margin-left:-6px;box-shadow:0 0 0 2px var(--surface)}
+.helpers .av:first-child{margin-left:0}
+.helpers .av.more{background:var(--sunk);color:var(--muted)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mysubs-h{color:var(--lime)}}
+:root[data-theme="dark"] .mysubs-h{color:var(--lime)}
+
+/* linked subtasks */
+.parent-link{display:inline-flex;align-items:baseline;gap:4px;align-self:flex-start;max-width:100%;font-size:.76rem;color:var(--muted);
+  padding:2px 8px;border-radius:8px;background:var(--sunk);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.parent-link b{color:var(--accent);font-weight:800}
+.parent-link span{overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--fg)}
+.parent-link:hover{background:var(--accent-soft)}
+.parent-banner{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.84rem;color:var(--muted);padding:8px 12px;border-radius:12px;background:var(--accent-soft)}
+.pb-link{border:0;background:transparent;padding:0;font:700 .9rem var(--f-display);color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.subrow.linked{background:color-mix(in srgb,var(--sunk) 70%,transparent)}
+.linkbtn{text-align:left;border:1px solid transparent;background:transparent;font-weight:600;color:var(--fg);cursor:pointer}
+.linkbtn:hover{text-decoration:underline;text-underline-offset:3px}
+.subrow.linked.done .linkbtn{text-decoration:line-through;color:var(--muted)}
+.kid-st{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;
+  background:color-mix(in srgb,var(--c,var(--s-queue)) 20%,var(--surface));color:var(--fg)}
+.kid-st[data-status="queue"]{--c:var(--s-queue)}.kid-st[data-status="ready"]{--c:var(--s-ready)}.kid-st[data-status="progress"]{--c:var(--s-progress)}
+.kid-st[data-status="blocked"]{--c:var(--s-blocked)}.kid-st[data-status="complete"]{--c:var(--s-complete)}
+
 </style>
 </head>
 <body>
@@ -666,6 +698,10 @@ async function saveDraft(){
   if(error){if(btn){btn.disabled=false;btn.textContent='Flourish';}handleErr(error);return;}
   draft=null;confirmDiscard=false;
   if(!tasks.some(x=>x.id===row.id))tasks.push(row);
+  const assigned=(row.subtasks||[]).filter(x=>x.assignee);
+  if(assigned.length){const keep=[];let made=0;
+    for(const it of row.subtasks){if(it.assignee){const k=await promoteSubtask(row,it,it.assignee);if(k){made++;continue;}}keep.push(it);}
+    if(made)write(row.id,{subtasks:keep});}
   closePanel();render();
   toast(`Task created${row.week&&row.week!==filter.week&&filter.week!=='all'?' in '+wkName(row.week).replace(/^Week of /,'week of '):''}`);}
 function discardDraft(){
@@ -707,9 +743,9 @@ function visible(t){
   if(filter.q){const q=filter.q.toLowerCase();
     const hay=[t.title,t.body,...(t.subtasks||[]).map(s=>s.text),aname(t.assignee),...(t.files||[]).map(f=>f.name)].join(' ').toLowerCase();
     if(!hay.includes(q))return false;}
-  if(filter.who==='me'){if(t.assignee!==me.id)return false;}
+  const pid=focusPerson();
+  if(pid){if(t.assignee!==pid)return false;}
   else if(filter.who==='none'){if(t.assignee)return false;}
-  else if(filter.who!=='all'){if(t.assignee!==filter.who)return false;}
   if(filter.blocker&&!(t.status==='blocked'&&(t.blocker||'_none')===filter.blocker))return false;
   return true;}
 function fmtDue(d){if(!d)return null;const dt=new Date(d+'T00:00:00');if(isNaN(dt))return null;
@@ -719,8 +755,27 @@ function urgChip(id){const u=urgencyOf(id);return h('span',{class:'urg','data-ur
 function typeChip(id){const ty=typeOf(id);const i=h('i');i.style.background=ty.color;const c=h('span',{class:'type'},i,ty.label);c.style.setProperty('--tc',ty.color);return c;}
 const ts=v=>v?new Date(v).getTime():0;
 
+// the person the board is currently filtered to (null for Everyone / Unassigned)
+function focusPerson(){if(filter.who==='me')return me.id;if(filter.who==='all'||filter.who==='none')return null;return filter.who;}
+// linked subtasks: real tasks whose parent_id points at the main task
+const childrenOf=id=>tasks.filter(x=>x.parent_id===id).sort((a,b)=>ts(a.created_at)-ts(b.created_at));
+const parentOf=t=>t&&t.parent_id?tasks.find(x=>x.id===t.parent_id)||null:null;
+function subProgress(t){const js=t.subtasks||[],kids=childrenOf(t.id);
+  return {done:js.filter(x=>x.done).length+kids.filter(k=>k.status==='complete').length,total:js.length+kids.length,kids};}
+// turn a checklist item into its own linked task on the assignee's board
+async function promoteSubtask(parent,item,assignee){
+  const now=new Date().toISOString();
+  const row={id:uid(),title:(item.text||'').trim()||'Subtask',body:'',status:item.done?'complete':'queue',blocker:null,type:parent.type||null,
+    week:parent.week||wkId(new Date()),due:null,assignee,subtasks:[],files:[],parent_id:parent.id,
+    created_by:me.id,updated_by:me.id,created_at:now,updated_at:now};
+  if(parent.priority)row.priority=parent.priority;
+  const {error}=await sb.from('tasks').insert(row);
+  if(error){if(/parent_id/i.test(error.message||''))toast('Linked subtasks need the database update (migration-05) first.');else handleErr(error);return null;}
+  if(!tasks.some(x=>x.id===row.id))tasks.push(row);
+  return row;}
+function setChildDone(k,done){setStatus(k.id,done?'complete':(k.status==='complete'?'progress':k.status));render();if(openId)syncPanel();}
 function card(t){
-  const subs=t.subtasks||[];const done=subs.filter(s=>s.done).length;
+  const {done,total,kids}=subProgress(t);const subs={length:total};const par=parentOf(t);
   const c=h('button',{class:'card'+(t.status==='complete'?' done':''),'data-status':t.status,draggable:'true','data-id':t.id,
     onclick:()=>openPanel(t.id),
     ondragstart:e=>{dragId=t.id;c.classList.add('dragging');e.dataTransfer.setData('text/plain',t.id);e.dataTransfer.effectAllowed='move';},
@@ -729,6 +784,9 @@ function card(t){
       urgencyOf(t.priority)?urgChip(t.priority):null,
       typeOf(t.type)?typeChip(t.type):null,
       filter.week==='all'?h('span',{class:'wk-tag',text:t.week?wkShort(t.week):'No week'}):null):null,
+    t.parent_id?h('span',{class:'parent-link',role:'link',tabindex:'0',title:par?'Open the main task':'Main task not found',
+        onclick:e=>{e.stopPropagation();if(par)openPanel(par.id);},onkeydown:e=>{if(e.key==='Enter'){e.stopPropagation();if(par)openPanel(par.id);}}},
+      h('b',{text:'\u21b3 Subtask'}),' of ',h('span',{text:par?(par.title||'Untitled task'):'a deleted task'})):null,
     h('div',{class:'t'+(t.title?'':' untitled'),text:t.title||'Untitled task'}),
     t.body?h('div',{class:'b',text:t.body}):null,
     t.status==='blocked'?h('div',null,h('span',{class:'chip blk',text:blockerLabel(t.blocker)||'Reason not set'})):null,
@@ -738,7 +796,10 @@ function card(t){
       (t.files||[]).length?h('span',{class:'sub',title:'Attachments',text:`📎 ${t.files.length}`}):null,
       (()=>{const n=comments.filter(c=>c.task_id===t.id).length;return n?h('span',{class:'sub cmt-count',title:n===1?'1 comment':n+' comments',text:`💬 ${n}`}):null;})(),
       t.due?h('span',{class:'due'+(isLate(t)?' late':''),text:(isLate(t)?'Overdue · ':'Due ')+fmtDue(t.due)}):null,
-      t.assignee?h('span',{class:'who'},avatar(t.assignee),h('span',{text:aname(t.assignee)})):h('span',{class:'who',style:'color:var(--muted)',text:'Unassigned'})));
+      (()=>{const helpers=[...new Set([...kids.map(k=>k.assignee),...(t.subtasks||[]).map(x=>x.assignee)].filter(a=>a&&a!==t.assignee))];
+        const stack=helpers.length?h('span',{class:'helpers',title:'Subtasks assigned to '+helpers.map(aname).join(', ')},...helpers.slice(0,3).map(a=>avatar(a)),helpers.length>3?h('span',{class:'av more',text:'+'+(helpers.length-3)}):null):null;
+        return t.assignee?h('span',{class:'who'},stack,avatar(t.assignee),h('span',{text:aname(t.assignee)}))
+          :h('span',{class:'who',style:'color:var(--muted)'},stack,helpers.length?null:'Unassigned');})()));
   return c;}
 
 function renderWeekBar(){
@@ -975,7 +1036,7 @@ function renderNotifList(){
   pop.replaceChildren(...[head,alerts,list.length?h('div',{class:'np-list'},...list.map(n=>{
       const t=tasks.find(x=>x.id===n.task_id);const c=comments.find(x=>x.id===n.comment_id);
       return h('button',{class:'np-item'+(n.read_at?'':' unread'),onclick:()=>openNotif(n)},avatar(n.actor),
-        h('span',{class:'np-txt'},h('span',null,h('b',{text:n.actor?aname(n.actor):'Someone'}),' mentioned you on ',h('b',{text:t?(t.title||'Untitled task'):'a task'})),
+        h('span',{class:'np-txt'},h('span',null,h('b',{text:n.actor?aname(n.actor):'Someone'}),n.kind==='subtask'?' gave you a subtask: ':' mentioned you on ',h('b',{text:t?(t.title||'Untitled task'):'a task'})),
           c?h('span',{class:'np-snip',text:c.body.length>110?c.body.slice(0,110)+'…':c.body}):null,
           h('span',{class:'np-time',text:ago(n.created_at)})));}))
     :h('p',{class:'np-empty',text:'No notifications yet. When someone tags you with @'+handleOf(me)+' in a comment, it shows up here.'})].filter(Boolean));}
@@ -998,10 +1059,10 @@ function openNotif(n){
     if(el){el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2200);}},120);}
 function announce(n){
   const t=tasks.find(x=>x.id===n.task_id);const who=n.actor?aname(n.actor):'Someone';const title=t?(t.title||'Untitled task'):'a task';
-  toast(`🔔 ${who} mentioned you on “${title}”`);
+  toast(n.kind==='subtask'?`🔔 ${who} gave you a subtask: “${title}”`:`🔔 ${who} mentioned you on “${title}”`);
   try{if(document.hidden&&'Notification' in window&&Notification.permission==='granted'){
     const c=comments.find(x=>x.id===n.comment_id);
-    const note=new Notification(`${who} mentioned you`,{body:`${title}${c?' — '+c.body.slice(0,120):''}`,tag:n.id});
+    const note=new Notification(n.kind==='subtask'?`${who} gave you a subtask`:`${who} mentioned you`,{body:`${title}${c?' — '+c.body.slice(0,120):''}`,tag:n.id});
     note.onclick=()=>{window.focus();openNotif(n);note.close();};}}catch(e){}}
 
 /* ---------- comments ---------- */
@@ -1097,7 +1158,7 @@ function buildPanel(){
     fileInput);
   const panel=h('aside',{class:'panel',role:'dialog','aria-modal':'true','aria-label':'Edit task'},
     h('div',{class:'panel-h'},h('span',{class:'crumb',id:'f-crumb'}),h('button',{class:'btn ghost',text:'Close',onclick:requestClose})),
-    h('div',{class:'panel-b'},title,
+    h('div',{class:'panel-b'},h('div',{class:'parent-banner',id:'f-parent',hidden:true}),title,
       h('div',{class:'fields'},
         h('label',{text:'Type'}),h('div',{class:'types',role:'group','aria-label':'Type',id:'f-type'}),
         h('label',{text:'Urgency'}),h('div',{class:'urgs',role:'group','aria-label':'Urgency',id:'f-urg'}),
@@ -1170,9 +1231,15 @@ function syncPanel(first){
       br.replaceChildren(inp,h('button',{class:'btn',text:'Add',onclick:save}),h('button',{class:'btn ghost',text:'Cancel',onclick:()=>{br.replaceChildren();syncPanel();}}));inp.focus();}}
   // assignee
   $('#f-assignee').replaceChildren(...(t.assignee?[avatar(t.assignee),h('span',{text:aname(t.assignee)})]:[h('span',{style:'color:var(--muted)',text:'Assign someone'})]));
-  // subtasks
-  const subs=t.subtasks||[];const done=subs.filter(s=>s.done).length;
-  $('#f-subhead').textContent=subs.length?`Subtasks · ${done}/${subs.length}`:'Subtasks';
+  // parent banner
+  const pb=$('#f-parent');const par=parentOf(t);
+  if(t.parent_id){pb.hidden=false;pb.replaceChildren(h('span',{text:'\u21b3 Subtask of'}),
+      par?h('button',{class:'pb-link',text:par.title||'Untitled task',onclick:()=>openPanel(par.id)}):h('i',{text:'a task that was deleted'}));}
+  else pb.hidden=true;
+  // subtasks: checklist items (JSON) + linked subtask cards
+  const subs=t.subtasks||[];const isDraftT=!!(draft&&draft.id===t.id);const canLink=!t.parent_id;
+  const sp=subProgress(t);
+  $('#f-subhead').textContent=sp.total?`Subtasks · ${sp.done}/${sp.total}`:'Subtasks';
   const box=$('#f-subs');
   if(!(act&&box.contains(act)&&act.classList.contains('stext'))){
     box.replaceChildren(...subs.map(s=>{
@@ -1182,10 +1249,18 @@ function syncPanel(first){
         h('input',{class:'stext',id:'subtext-'+s.id,value:s.text,'aria-label':'Subtask',
           onchange:e=>{const v=e.target.value.trim();if(v)upd(it=>{it.text=v;});},onkeydown:e=>{if(e.key==='Enter')e.target.blur();}}),
         h('button',{class:'mini',title:s.assignee?aname(s.assignee):'Assign subtask','aria-label':'Assign subtask',
-          onclick:e=>openPicker(e.currentTarget,a=>upd(it=>{it.assignee=a;}))},
+          onclick:e=>openPicker(e.currentTarget,async a=>{
+            if(!a||!canLink||isDraftT){upd(it=>{it.assignee=a;});if(a&&isDraftT)toast(`Goes to ${aname(a)}\u2019s board when you click Flourish`);return;}
+            const row=await promoteSubtask(getTask(t.id),s,a);
+            if(row){upd((it,cur)=>{cur.splice(cur.indexOf(it),1);});toast(`Subtask added to ${a===me.id?'your':aname(a)+'\u2019s'} board`);}})},
           s.assignee?avatar(s.assignee):h('span',{class:'av',style:'background:var(--line);color:var(--muted)',text:'+'})),
         h('button',{class:'x',title:'Remove subtask','aria-label':'Remove subtask',text:'×',onclick:()=>upd((it,cur)=>{cur.splice(cur.indexOf(it),1);})}));}));
-    if(!subs.length)box.append(h('div',{style:'color:var(--muted);font-size:.85rem',text:'No subtasks yet.'}));}
+    sp.kids.forEach(k=>box.append(h('div',{class:'subrow linked'+(k.status==='complete'?' done':''),'data-status':k.status},
+      h('input',{type:'checkbox',id:'kid-'+k.id,checked:k.status==='complete','aria-label':'Complete',onchange:e=>setChildDone(k,e.target.checked)}),
+      h('button',{class:'stext linkbtn',title:'Open this subtask',text:k.title||'Untitled subtask',onclick:()=>openPanel(k.id)}),
+      h('span',{class:'kid-st','data-status':k.status,text:(STATUSES.find(x=>x.id===k.status)||STATUSES[0]).label}),
+      h('span',{class:'mini',title:k.assignee?aname(k.assignee):'Unassigned'},k.assignee?avatar(k.assignee):h('span',{class:'av',style:'background:var(--line);color:var(--muted)',text:'?'})))));
+    if(!sp.total)box.append(h('div',{style:'color:var(--muted);font-size:.85rem',text:canLink?'No subtasks yet. Assign one to a teammate and it becomes a card on their board.':'No subtasks yet.'}));}
   // attachments
   const files=t.files||[];
   $('#f-filehead').textContent=files.length?`Attachments · ${files.length}`:'Attachments';
@@ -1207,9 +1282,11 @@ function syncPanel(first){
   if(t.created_at)parts.push(h('span',{text:`Created ${when(t.created_at)}${t.created_by?' by '+aname(t.created_by):''}`}));
   if(t.updated_at)parts.push(h('span',{text:`Updated ${when(t.updated_at)}${t.updated_by?' by '+aname(t.updated_by):''}`}));
   const del=confirmDelete
-    ?h('div',{class:'confirm',style:'margin-left:auto'},'Delete this task with its subtasks and attachments?',
-        h('button',{class:'btn danger',text:'Delete',onclick:async()=>{const id=t.id;const paths=(t.files||[]).filter(x=>x.kind!=='link'&&x.path).map(x=>x.path);
-          closePanel();tasks=tasks.filter(x=>x.id!==id);render();
+    ?h('div',{class:'confirm',style:'margin-left:auto'},(()=>{const n=childrenOf(t.id).length;
+        return n?`Delete this task, its ${n} linked subtask${n===1?'':'s'} (from everyone\u2019s board) and all attachments?`:'Delete this task with its subtasks and attachments?';})(),
+        h('button',{class:'btn danger',text:'Delete',onclick:async()=>{const id=t.id;const kids=childrenOf(id);
+          const paths=[t,...kids].flatMap(x=>(x.files||[]).filter(f=>f.kind!=='link'&&f.path).map(f=>f.path));
+          closePanel();tasks=tasks.filter(x=>x.id!==id&&x.parent_id!==id);render();
           await (chains[id]||Promise.resolve());
           const {error}=await sb.from('tasks').delete().eq('id',id);
           if(error){handleErr(error);loadAll();return;}
