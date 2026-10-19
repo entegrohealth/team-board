@@ -1139,6 +1139,8 @@ function attachMentions(ta,host){
   ta.addEventListener('blur',()=>setTimeout(close,120));}
 
 /* ---------- notifications ---------- */
+const NOTIF_VERB={mention:' mentioned you on ',assigned:' assigned you a task: ',subtask:' gave you a subtask: '};
+const notifVerb=n=>NOTIF_VERB[n.kind]||NOTIF_VERB.mention;
 const unread=()=>notifs.filter(n=>!n.read_at).length;
 function renderBell(){
   const b=$('#bell');if(!b)return;b.hidden=!notifsOk;
@@ -1156,10 +1158,10 @@ function renderNotifList(){
   pop.replaceChildren(...[head,alerts,list.length?h('div',{class:'np-list'},...list.map(n=>{
       const t=tasks.find(x=>x.id===n.task_id);const c=comments.find(x=>x.id===n.comment_id);
       return h('button',{class:'np-item'+(n.read_at?'':' unread'),onclick:()=>openNotif(n)},avatar(n.actor),
-        h('span',{class:'np-txt'},h('span',null,h('b',{text:n.actor?aname(n.actor):'Someone'}),n.kind==='subtask'?' gave you a subtask: ':' mentioned you on ',h('b',{text:t?(t.title||'Untitled task'):'a task'})),
+        h('span',{class:'np-txt'},h('span',null,h('b',{text:n.actor?aname(n.actor):'Someone'}),notifVerb(n),h('b',{text:t?(t.title||'Untitled task'):'a task'})),
           c?h('span',{class:'np-snip',text:c.body.length>110?c.body.slice(0,110)+'…':c.body}):null,
           h('span',{class:'np-time',text:ago(n.created_at)})));}))
-    :h('p',{class:'np-empty',text:'No notifications yet. When someone tags you with @'+handleOf(me)+' in a comment, it shows up here.'})].filter(Boolean));}
+    :h('p',{class:'np-empty',text:'No notifications yet. When someone assigns you a task or tags you with @'+handleOf(me)+' in a comment, it shows up here.'})].filter(Boolean));}
 function toggleNotifs(force){
   notifOpen=force!==undefined?force:!notifOpen;
   const wrap=$('#bell-wrap');let pop=$('#notif-pop');
@@ -1179,10 +1181,10 @@ function openNotif(n){
     if(el){el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2200);}},120);}
 function announce(n){
   const t=tasks.find(x=>x.id===n.task_id);const who=n.actor?aname(n.actor):'Someone';const title=t?(t.title||'Untitled task'):'a task';
-  toast(n.kind==='subtask'?`🔔 ${who} gave you a subtask: “${title}”`:`🔔 ${who} mentioned you on “${title}”`);
+  toast(`🔔 ${who}${notifVerb(n).replace(/:\s$/,'')} “${title}”`.replace(/\s+“/,' “'));
   try{if(document.hidden&&'Notification' in window&&Notification.permission==='granted'){
     const c=comments.find(x=>x.id===n.comment_id);
-    const note=new Notification(n.kind==='subtask'?`${who} gave you a subtask`:`${who} mentioned you`,{body:`${title}${c?' — '+c.body.slice(0,120):''}`,tag:n.id});
+    const note=new Notification(`${who}${notifVerb(n).replace(/( on|:)\s$/,'')}`,{body:`${title}${c?' — '+c.body.slice(0,120):''}`,tag:n.id});
     note.onclick=()=>{window.focus();openNotif(n);note.close();};}}catch(e){}}
 
 /* ---------- comments ---------- */
