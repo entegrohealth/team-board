@@ -252,6 +252,7 @@ html,body{margin:0}
   /* status: strong (dots, pills) / tint (column) / ink (text on tint) */
   --s-queue:#8a94a3;    --t-queue:#eef0f4;    --i-queue:#3d4552;
   --s-ready:#3b8fe0;    --t-ready:#e5f0fd;    --i-ready:#1d4f84;
+  --s-paused:#8a6fd1;   --t-paused:#efeafb;   --i-paused:#4a3486;
   --s-progress:#f2b81c; --t-progress:#fff5d4; --i-progress:#6b4d00;
   --s-blocked:#e5534b;  --t-blocked:#fde7e5;  --i-blocked:#8c231d;
   --s-complete:#3fa860; --t-complete:#e2f5e7; --i-complete:#1e5e31;
@@ -264,6 +265,7 @@ html,body{margin:0}
   --accent:#6cc2cd; --accent-fg:#062a2e; --accent-soft:#183a3e; --lime:#b6e27a; --lime-ink:#1a300c; --sky:#2b4a52;
   --s-queue:#9aa4b4;    --t-queue:#1c2329;    --i-queue:#c9d0db;
   --s-ready:#66adf0;    --t-ready:#132638;    --i-ready:#b9d9f8;
+  --s-paused:#a993ec;   --t-paused:#211a33;   --i-paused:#d6caf7;
   --s-progress:#f5c94a; --t-progress:#2d2510; --i-progress:#f8df98;
   --s-blocked:#f07b74;  --t-blocked:#331a19;  --i-blocked:#f8bdb8;
   --s-complete:#6cc787; --t-complete:#142a1b; --i-complete:#b8e8c5;
@@ -275,6 +277,7 @@ html,body{margin:0}
   --accent:#6cc2cd; --accent-fg:#062a2e; --accent-soft:#183a3e; --lime:#b6e27a; --lime-ink:#1a300c; --sky:#2b4a52;
   --s-queue:#9aa4b4;    --t-queue:#1c2329;    --i-queue:#c9d0db;
   --s-ready:#66adf0;    --t-ready:#132638;    --i-ready:#b9d9f8;
+  --s-paused:#a993ec;   --t-paused:#211a33;   --i-paused:#d6caf7;
   --s-progress:#f5c94a; --t-progress:#2d2510; --i-progress:#f8df98;
   --s-blocked:#f07b74;  --t-blocked:#331a19;  --i-blocked:#f8bdb8;
   --s-complete:#6cc787; --t-complete:#142a1b; --i-complete:#b8e8c5;
@@ -325,6 +328,7 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
   background:var(--tint);border-radius:20px;padding:12px;gap:10px;border:1px solid color-mix(in srgb,var(--c) 22%,transparent);
   box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 50%,transparent)}
 .col[data-status="ready"]{--c:var(--s-ready);--tint:var(--t-ready);--ink:var(--i-ready)}
+.col[data-status="paused"]{--c:var(--s-paused);--tint:var(--t-paused);--ink:var(--i-paused)}
 .col[data-status="progress"]{--c:var(--s-progress);--tint:var(--t-progress);--ink:var(--i-progress)}
 .col[data-status="blocked"]{--c:var(--s-blocked);--tint:var(--t-blocked);--ink:var(--i-blocked)}
 .col[data-status="complete"]{--c:var(--s-complete);--tint:var(--t-complete);--ink:var(--i-complete)}
@@ -386,6 +390,7 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
 @media (prefers-reduced-motion:reduce){.card,.btn,.st,.tp{transition:none}.card:hover,.btn:hover{transform:none}}
 .st[aria-pressed="true"][data-status="queue"]{background:var(--s-queue);color:#fff}
 .st[aria-pressed="true"][data-status="ready"]{background:var(--s-ready);color:#fff}
+.st[aria-pressed="true"][data-status="paused"]{background:var(--s-paused);color:#fff}
 .st[aria-pressed="true"][data-status="progress"]{background:var(--s-progress);color:#3a2a00}
 .st[aria-pressed="true"][data-status="blocked"]{background:var(--s-blocked);color:#fff}
 .st[aria-pressed="true"][data-status="complete"]{background:var(--s-complete);color:#fff}
@@ -528,7 +533,7 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
 .subrow.linked.done .linkbtn{text-decoration:line-through;color:var(--muted)}
 .kid-st{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;
   background:color-mix(in srgb,var(--c,var(--s-queue)) 20%,var(--surface));color:var(--fg)}
-.kid-st[data-status="queue"]{--c:var(--s-queue)}.kid-st[data-status="ready"]{--c:var(--s-ready)}.kid-st[data-status="progress"]{--c:var(--s-progress)}
+.kid-st[data-status="queue"]{--c:var(--s-queue)}.kid-st[data-status="ready"]{--c:var(--s-ready)}.kid-st[data-status="paused"]{--c:var(--s-paused)}.kid-st[data-status="progress"]{--c:var(--s-progress)}
 .kid-st[data-status="blocked"]{--c:var(--s-blocked)}.kid-st[data-status="complete"]{--c:var(--s-complete)}
 
 /* ===================== phones & small tablets ===================== */
@@ -585,6 +590,7 @@ header.top{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filt
   .stab.on .dot{background:#fff!important}
   .stab.on[data-status="queue"]{background:var(--s-queue)}
   .stab.on[data-status="ready"]{background:var(--s-ready)}
+  .stab.on[data-status="paused"]{background:var(--s-paused)}
   .stab.on[data-status="progress"]{background:var(--s-progress);color:#3a2a00}
   .stab.on[data-status="progress"] .dot{background:#3a2a00!important}
   .stab.on[data-status="blocked"]{background:var(--s-blocked)}
@@ -693,9 +699,9 @@ const BUCKET='attachments';
 
 const STATUSES=[
   {id:'queue',label:'Queue'},
-  {id:'ready',label:'Ready to start'},
   {id:'progress',label:'In progress'},
   {id:'blocked',label:'Blocked'},
+  {id:'paused',label:'Paused'},
   {id:'complete',label:'Complete'}];
 const TYPES=[
   {id:'amazon',label:'Amazon',color:'#e08a1e'},
